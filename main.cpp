@@ -1,4 +1,4 @@
-//************************************************************
+// ************************************************************
 //
 //      Construção de um Ar condicionado para disciplina de
 //                 Computação Gráfica
@@ -11,137 +11,108 @@
 //                 Regis Sganzerla
 //
 //
-//************************************************************
+// ************************************************************
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <iostream>
-#include <math.h>
+#include <cstdlib>
+#include <cmath>
+#include <sstream>
 
 #if __APPLE__
-	#include <OpenGL/gl.h>
-	#include <OpenGL/glu.h>
-	#include <GLUT/glut.h>
-	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#elif linux
-	#include <GL/glut.h>
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#include <GLUT/glut.h>
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #else
-	#include <gl/glut.h>
+#include <gl/glut.h>
 #endif
 
 using namespace std;
 
-#ifndef M_PI
-#define M_PI 3.1415926
-#endif
+// ************************************************************
+// DEFINES
+// ************************************************************
 
 #define PI 3.14
 
-#define LARGURA		800
-#define ALTURA		600
+#define JANELAS   3
+#define LUZES     1
 
-#define NUM_OBJETOS   2
-#define CENA          0
-#define CAIXA         1
+#define LAR_MAIN  600
+#define ALT_MAIN  600
 
-// #define TRONCO        2
-// #define CABECA        3
-// #define BRACO_D       4
-// #define BRACO_E       5
-// #define QUADRIL       6
-// #define PERNA_D       7
-// #define PERNA_E       8
+#define LAR_INFO  155
+#define ALT_INFO  60
 
-#define NUM_TEX       5
-#define TEXTURA1   1000
-#define TEXTURA2   1001
-#define TEXTURA3   1002
-#define TEXTURA4   1003
-#define TEXTURA5   1004
-#define TEXTURA6   1005
+#define LAR_HELP  600
+#define ALT_HELP  240
 
-GLuint  texture_id[ NUM_TEX ];
+// ************************************************************
+// VARIÁVEIS GERAIS
+// ************************************************************
+
+struct tipo_camera {
+    GLfloat posx;               // posicao x da camera
+    GLfloat posy;               // posicao y da camera
+    GLfloat posz;               // posicao z da camera
+    GLfloat alvox;              // alvo x da visualizacao
+    GLfloat alvoy;              // alvo y da visualizacao
+    GLfloat alvoz;              // alvo z da visualizacao
+    GLfloat ang;                // abertura da 'lente' - efeito de zoom
+    GLfloat inicio;             // inicio da area de visualizacao em profundidade
+    GLfloat fim;                // fim da area de visualizacao em profundidade
+};
 
 struct tipo_transformacao{
-	GLfloat dx, dy, dz;         // paramatros de translacao
-	GLfloat sx, sy, sz;         // parametros de escala
-	GLfloat angx , angy , angz; // parametros de rotacao
+    GLfloat dx, dy, dz;         // paramatros de translacao
+    GLfloat sx, sy, sz;         // parametros de escala
+    GLfloat angx , angy , angz; // parametros de rotacao
 };
+
+struct tipo_janela{
+    GLfloat largura;            // largura da janela
+    GLfloat altura;             // altura da jaanela
+    GLfloat aspecto;            // aspecto da janela (relacao entre largura e altura)
+};
+
+struct tipo_luz{
+    GLfloat difusa[ 4 ];
+    GLfloat especular[ 4 ];
+    GLfloat posicao[ 4 ];
+    GLfloat direcao[ 3 ];
+    GLfloat cutoff;
+    GLfloat exponente;
+    bool    ligada;
+};
+
+// define a perspectiva da camera
+tipo_camera camera;
 
 // definicao dos valores de transformacao
-struct tipo_transformacao transf[ NUM_OBJETOS ];
+tipo_transformacao transf;
 
-// Variáveis para controles de navegação
-GLfloat angle, fAspect;
-GLfloat rotX, rotY, rotX_ini, rotY_ini;
-GLfloat obsX, obsY, obsZ, obsX_ini, obsY_ini, obsZ_ini;
-GLint x_ini, y_ini, bot, objeto, passo;
-char transformacao, eixo;
+// definicao dos janela principal
+tipo_janela janela;
 
-string objetos[] = {"Cena", "Ar Condiconado"};
+// definicao de uma fonte de luz
+tipo_luz luz[ LUZES ];
 
-struct point
-{
-	float x, y, z;
-};
+// especularidade e brilho do material
+GLfloat especularidade[ 4 ];
+GLfloat ambiente[ 4 ];
+GLint   espec_material;
 
-// ----------------------------------- VARIÁVEIS CAIXA AR CONDICIONADO -----------------------------------
+// transformacao atual, eixo atual
+char  transformacao, eixo, tonalizacao;
 
-int arLargura = 86;
-int arAltura = 60;
-int arProfundidade = 30;
-int diametroHelice = 40;
+// controle das janelas, passo de atualizacao dos parametros das transformacoes e qual objeto mostrar
+GLint jan[ JANELAS ], passo, vertice;
 
-int RH = diametroHelice/2;		// Raio da hélice
-point FA = {-(arLargura/2), arAltura/2, arProfundidade/2};	// Canto Superior Esquerdo
-point FB = {FA.x+arLargura, FA.y, FA.z};					// Canto Superior Direito
-point FC = {FA.x+arLargura, FA.y-arAltura, FA.z};			// Canto Inferior Direito
-point FD = {FA.x, FA.y-arAltura, FA.z};						// Canto Inferior Esquerdo
+// ************************************************************
+// VARIÁVEIS HÉLICE
+// ************************************************************
 
-point CH = {FA.x+(arLargura/3), FA.y-(arAltura/2), FA.z};	// Centro da Hélice
-point HA = {CH.x-RH, CH.y+RH, CH.z};						// Canto Superior Esquerdo da Hélice
-point HB = {CH.x+RH, CH.y+RH, CH.z};						// Canto Superior Direito da Hélice
-point HC = {CH.x+RH, CH.y-RH, CH.z};						// Canto Inferior Direito da Hélice
-point HD = {CH.x-RH, CH.y-RH, CH.z};						// Canto Inferior Esquerdo da Hélice
-
-float RC = 2;		// Raio dos Cantos
-// Pontos de Cima
-point CA = {FA.x, FA.y+RC, FA.z-arProfundidade};
-point CB = {FB.x, FB.y+RC, FB.z-arProfundidade};
-point CD = {FA.x, FA.y+RC, FA.z-RC};
-point CC = {FB.x, FB.y+RC, FB.z-RC};
-
-// Pontos do Lado Direito
-point LDA = {FB.x+RC, FB.y, FB.z-RC};
-point LDB = {FB.x+RC, FB.y, FB.z-arProfundidade};
-point LDC = {FC.x+RC, FC.y, FC.z-arProfundidade};
-point LDD = {FC.x+RC, FC.y, FC.z-RC};
-
-// Pontos de Baixo
-point BA = {FD.x, FD.y-RC, FD.z-RC};
-point BB = {FC.x, FC.y-RC, FC.z-RC};
-point BC = {FC.x, FC.y-RC, FC.z-arProfundidade};
-point BD = {FD.x, FD.y-RC, FD.z-arProfundidade};
-
-// Pontos do Lado Esquerdo
-point LEA = {FA.x-RC, FA.y, FA.z-arProfundidade};
-point LEB = {FA.x-RC, FA.y, FA.z-RC};
-point LEC = {FD.x-RC, FD.y, FD.z-RC};
-point LED = {FD.x-RC, FD.y, FD.z-arProfundidade};
-
-// Pontos de Tras
-point TA = {FB.x, FB.y, FB.z-arProfundidade-RC};
-point TB = {FA.x, FA.y, FA.z-arProfundidade-RC};
-point TC = {FD.x, FD.y, FD.z-arProfundidade-RC};
-point TD = {FC.x, FC.y, FC.z-arProfundidade-RC};
-
-
-// ----------------------------------- VARIÁVEIS P/ HÉLICE -----------------------------------
-
-// Numero de vértices para a curva bezier
-GLint numero_vertices_helice = 8;
-
-// Vertices que forma a curva bezier
+// Vértices que forma a curva bezier
 GLfloat vertices_helice[ 8 ][ 8 ][ 3 ] = {
     {{  90 , -30 , 110 },{ 70 , -27 , 110 },{ 50 , -25 , 117 },{ 30 , -20 , 113 },{  0 , -15 , 120 },{ -10 , -10 , 117 },{ -30 , -5 , 113 },{ -50 , 0 , 110 }} ,
     {{ 100 , -30 , 100 },{ 80 , -27 ,  98 },{ 60 , -25 ,  97 },{ 40 , -20 ,  96 },{ 20 , -15 ,  95 },{   0 , -10 ,  94 },{ -20 , -5 ,  92 },{ -45 , 0 ,  90 }} ,
@@ -153,462 +124,221 @@ GLfloat vertices_helice[ 8 ][ 8 ][ 3 ] = {
     {{  20 , -30 ,   0 },{ 15 , -27 , -10 },{ 10 , -25 , -15 },{  5 , -20 ,   0 },{  0 , -15 ,   0 },{  -5 , -10 ,   0 },{ -15 , -5 ,   0 },{ -20 , 0 ,   0 }}
 };
 
-int LoadBMP(char* filename)
+// Número de vértices para a curva bezier
+GLint numero_vertices_helice = 8;
+
+// ************************************************************
+// FUNÇÕES GERAIS
+// ************************************************************
+
+// Funcao para mostrar texto
+void mostra_texto_bitmap( float x , float y , string texto )
 {
-	#define SAIR        {fclose(fp_arquivo); return -1;}
-	#define CTOI(C)     (*(int*)&C)
+    glRasterPos2f ( x , y );
 
-	GLubyte     *image;
-	GLubyte     Header[0x54];
-	GLuint      DataPos, imageSize;
-	GLsizei     Width,Height;
-
-	// Abre o arquivo e efetua a leitura do Header do arquivo BMP
-	FILE * fp_arquivo = fopen(filename,"rb");
-	if (!fp_arquivo)
-		return -1;
-	if (fread(Header,1,0x36,fp_arquivo)!=0x36)
-		SAIR;
-	if (Header[0]!='B' || Header[1]!='M')
-		SAIR;
-	if (CTOI(Header[0x1E])!=0)
-		SAIR;
-	if (CTOI(Header[0x1C])!=24)
-		SAIR;
-
-	// Recupera a informação dos atributos de
-	// altura e largura da imagem
-	Width   = CTOI(Header[0x12]);
-	Height  = CTOI(Header[0x16]);
-	( CTOI(Header[0x0A]) == 0 ) ? ( DataPos=0x36 ) : ( DataPos = CTOI(Header[0x0A]) );
-
-	imageSize=Width*Height*3;
-
-	// Efetura a Carga da Imagem
-	// image = (GLubyte *) malloc ( imageSize );
-	image = new GLubyte[imageSize];
-	int retorno;
-	retorno = fread(image,1,imageSize,fp_arquivo);
-
-	if (retorno != imageSize) {
-		delete (image);
-		SAIR;
-	}
-
-	// Inverte os valores de R e B
-	int t, i;
-
-	for ( i = 0; i < imageSize; i += 3 )
-	{
-		t = image[i];
-		image[i] = image[i+2];
-		image[i+2] = t;
-	}
-
-	// Tratamento da textura para o OpenGL
-
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S    ,GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T    ,GL_REPEAT);
-
-	glTexEnvf ( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-
-	// Faz a geraçao da textura na memória
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Width, Height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-
-	fclose (fp_arquivo);
-	delete (image);
-	return 1;
+    for( int i = 0 ; i < texto.length() ; i++ )
+        glutBitmapCharacter( GLUT_BITMAP_8_BY_13 , texto[ i ] );
 }
 
-void Texturizacao() //faz o carregamento
+// ************************************************************
+// FUNÇÕES JANELA INFO
+// ************************************************************
+
+// Funcao responsavel por mostrar o info
+void desenha_info(void)
 {
-	glEnable(GL_TEXTURE_2D);
-	glPixelStorei ( GL_UNPACK_ALIGNMENT, 1 );//Como armazena o pixel
-	glGenTextures ( NUM_TEX , texture_id );//armazena q qtidade de textura
+    ostringstream msg1, msg2, msg3;
 
-	texture_id[ 0 ] = TEXTURA1; // define um numero (identificacao) para a textura
-	glBindTexture ( GL_TEXTURE_2D, texture_id[0] );//armazena na posição 0 do vetor
-	LoadBMP ( "Texturas/body.bmp" ); // lê a textura
+    // Limpa a janela de visualizao com a cor de fundo especificada
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	texture_id[ 1 ] = TEXTURA2;
-	glBindTexture ( GL_TEXTURE_2D, texture_id[1] );
-	LoadBMP ( "Texturas/head.bmp" );
+    // seleciona o tipo de matriz para a visualizacao dos objetos (modelos)
+    glMatrixMode(GL_MODELVIEW);
 
-	texture_id[ 2 ] = TEXTURA3;
-	glBindTexture ( GL_TEXTURE_2D, texture_id[2] );
-	LoadBMP ( "Texturas/hip.bmp" );
+    glColor4f( 1.0 , 1.0 , 0.0 , 1.0 );
 
-	texture_id[ 3 ] = TEXTURA4;
-	glBindTexture ( GL_TEXTURE_2D, texture_id[3] );
-	LoadBMP ( "Texturas/arm.bmp" );
+    msg1 << "TRANSFORMACAO : " << transformacao;
+    msg2 << "         EIXO : " << eixo;
+    msg3 << "        PASSO : " << passo;
 
-	texture_id[ 4 ] = TEXTURA5;
-	glBindTexture ( GL_TEXTURE_2D, texture_id[4] );
-	LoadBMP ( "Texturas/leg.bmp" );
+    mostra_texto_bitmap( 0 ,  3 , msg3.str() );
+    mostra_texto_bitmap( 0 , 23 , msg2.str() );
+    mostra_texto_bitmap( 0 , 43 , msg1.str() );
 
-	texture_id[ 5 ] = TEXTURA6;
-	glBindTexture ( GL_TEXTURE_2D, texture_id[5] );
-	LoadBMP ( "Texturas/ground.bmp" );
-
-	glTexGeni( GL_S , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
-	glTexGeni( GL_T , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
+    // Executa os comandos OpenGL
+    glutSwapBuffers();
 }
 
-// Função responsável pela especificação dos parâmetros de iluminação
-void DefineIluminacao (void)
+// Funcao usada para especificar a projecao ortogonal do info
+void especifica_parametros_visualizacao_info( void )
 {
-	GLfloat luzAmbiente[4]=  {0.4,0.4,0.4,1.0};
-	GLfloat luzDifusa[4]=    {0.3,0.3,0.3,1.0};		// "cor"
-	GLfloat luzEspecular[4]= {1.0, 1.0, 1.0, 1.0};	// "brilho"
-	GLfloat posicaoLuz[4]=   {0.0, 50.0, 50.0, 1.0};
+    // seleciona o tipo de matriz para a projecao
+    glMatrixMode( GL_PROJECTION );
 
-	// Capacidade de brilho do material
-	GLfloat especularidade[4]={1.0,1.0,1.0,1.0};
-	// GLint especMaterial = 60;
-	GLint especMaterial = 20;
+    // limpa (zera) as matrizes
+    glLoadIdentity();
 
-	// Define a refletância do material
-	glMaterialfv(GL_FRONT,GL_SPECULAR, especularidade);
-	// Define a concentração do brilho
-	glMateriali(GL_FRONT,GL_SHININESS,especMaterial);
+    glClearColor( 0.0 , 0.0 , 0.0 , 1.0 );
 
-	// Ativa o uso da luz ambiente
-	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, luzAmbiente);
+    gluOrtho2D(  0 , LAR_INFO , 0 , ALT_INFO );
 
-	// Define os parâmetros da luz de número 0
-	glLightfv(GL_LIGHT0, GL_AMBIENT, luzAmbiente);
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, luzDifusa );
-	glLightfv(GL_LIGHT0, GL_SPECULAR, luzEspecular );
-	glLightfv(GL_LIGHT0, GL_POSITION, posicaoLuz );
 }
 
-
-void SRT (int i, float dx=0, float dy=0, float dz=0, float angx=0, float angy=0, float angz=0, float sx=0, float sy=0, float sz=0)
+// =======================================================================
+// Funcao callback chamada quando o tamanho da janela do info eh alterado
+void altera_tamanho_janela_info( GLsizei largura , GLsizei altura )
 {
-	if (i == -1)
-	{
-		glTranslatef( dx, dy, dz);
-		glRotatef( angx, 1 , 0 , 0 );
-		glRotatef( angy, 0 , 1 , 0 );
-		glRotatef( angz, 0 , 0 , 1 );
-		glScalef( sx, sy, sz);
-	}
-	else
-	{
-		glTranslatef( dx + transf[ i ].dx , dy + transf[ i ].dy , dz + transf[ i ].dz );
-		glRotatef( angx + transf[ i ].angx , 1 , 0 , 0 );
-		glRotatef( angy + transf[ i ].angy , 0 , 1 , 0 );
-		glRotatef( angz + transf[ i ].angz , 0 , 0 , 1 );
-		glScalef( sx + transf[ i ].sx , sy + transf[ i ].sy , sz + transf[ i ].sz );
-	}
+    glutReshapeWindow( LAR_INFO , ALT_INFO );
+
+    especifica_parametros_visualizacao_info();
 }
 
-// desenha cubo passando {textura, height, width e depth}
-void DrawCube(int texture, int w, int h, int d)
+// ************************************************************
+// FUNÇÕES JANELA HELP
+// ************************************************************
+
+// Funcao responsavel por mostrar o help
+void desenha_help(void)
 {
-	float TXTx[5] = {0.0, 1/4.0, 2/4.0, 3/4.0, 4/4.0};
-	float TXTy[4] = {0.0, 1/3.0, 2/3.0, 3/3.0};
+    // Limpa a janela de visualizao com a cor de fundo especificada
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	w/=2; h/=2; d/=2;
-	glBindTexture ( GL_TEXTURE_2D, texture );
-	glColor3f(1.0f, 1.0f, 1.0f);
-	glBegin( GL_QUADS );
+    // seleciona o tipo de matriz para a visualizacao dos objetos (modelos)
+    glMatrixMode(GL_MODELVIEW);
 
-		// Face frontal
-		glNormal3f(   0.0 ,   0.0 ,  1.0 );	// Normal da face
-		glTexCoord2f( TXTx[1] , TXTy[1] ); glVertex3f( -w , -h , d );
-		glTexCoord2f( TXTx[2] , TXTy[1] ); glVertex3f(  w , -h , d );
-		glTexCoord2f( TXTx[2] , TXTy[2] ); glVertex3f(  w ,  h , d );
-		glTexCoord2f( TXTx[1] , TXTy[2] ); glVertex3f( -w ,  h , d );
+    glClear( GL_COLOR_BUFFER_BIT );
+    glColor4f( 1.0 , 1.0 , 0.0 , 1.0 );
 
-		// Face traseira
-		glNormal3f(   0.0 ,   0.0 ,  -1.0 );	// Normal da face
-		glTexCoord2f( TXTx[4] , TXTy[2] ); glVertex3f( -w ,  h , -d );
-		glTexCoord2f( TXTx[3] , TXTy[2] ); glVertex3f(  w ,  h , -d );
-		glTexCoord2f( TXTx[3] , TXTy[1] ); glVertex3f(  w , -h , -d );
-		glTexCoord2f( TXTx[4] , TXTy[1] ); glVertex3f( -w , -h , -d );
+    mostra_texto_bitmap( 0 , 225 , "ESC           : finaliza o programa" );
+    mostra_texto_bitmap( 0 , 210 , "F             : alterna tonalizacao entre flat e smooth" );
+    mostra_texto_bitmap( 0 , 195 , "1 a 4         : seleciona um dos 4 vertices do canto" );
+    mostra_texto_bitmap( 0 , 180 , "CTRL NAVEGACAO: o vertice de canto selecionado" );
+    mostra_texto_bitmap( 0 , 165 , "ALT +         : aumenta o passo" );
+    mostra_texto_bitmap( 0 , 150 , "ALT -         : diminui o passo" );
+    mostra_texto_bitmap( 0 , 135 , "I             : reinicializa" );
+    mostra_texto_bitmap( 0 , 120 , "L             : liga/desliga luz" );
+    mostra_texto_bitmap( 0 , 105 , "X Y Z         : seleciona o eixo" );
+    mostra_texto_bitmap( 0 ,  90 , "S R T         : seleciona a transformacao" );
+    mostra_texto_bitmap( 0 ,  75 , "A             : aumenta o angulo de abertura da perspectiva (zoom-out)" );
+    mostra_texto_bitmap( 0 ,  60 , "a             : diminui o angulo de abertura da perspectiva (zoom-in)" );
+    mostra_texto_bitmap( 0 ,  45 , "+ -           : executa a transformacao corrente sobre o eixo corrente" );
+    mostra_texto_bitmap( 0 ,  30 , "ALT NAVEGACAO : movimenta a fonte de luz" );
+    mostra_texto_bitmap( 0 ,  15 , "NAVEGACAO     : movimenta a camera" );
 
-		// Face superior
-		glNormal3f(   0.0 , 1.0 ,  0.0 );	// Normal da face
-		glTexCoord2f( TXTx[1] , TXTy[2] ); glVertex3f( -w ,  h ,  d );
-		glTexCoord2f( TXTx[2] , TXTy[2] ); glVertex3f(  w ,  h ,  d );
-		glTexCoord2f( TXTx[2] , TXTy[3] ); glVertex3f(  w ,  h , -d );
-		glTexCoord2f( TXTx[1] , TXTy[3] ); glVertex3f( -w ,  h , -d );
-
-		// Face inferior
-		glNormal3f(   0.0 ,-1.0 ,  0.0 );	// Normal da face
-		glTexCoord2f( TXTx[1] , TXTy[0] ); glVertex3f( -w , -h , -d );
-		glTexCoord2f( TXTx[2] , TXTy[0] ); glVertex3f(  w , -h , -d );
-		glTexCoord2f( TXTx[2] , TXTy[1] ); glVertex3f(  w , -h ,  d );
-		glTexCoord2f( TXTx[1] , TXTy[1] ); glVertex3f( -w , -h ,  d );
-
-		// Face esquerda
-		glNormal3f(   -1.0 , 0.0 ,  0.0 );	// Normal da face
-		glTexCoord2f( TXTx[0] , TXTy[1] ); glVertex3f( -w , -h , -d );
-		glTexCoord2f( TXTx[1] , TXTy[1] ); glVertex3f( -w , -h ,  d );
-		glTexCoord2f( TXTx[1] , TXTy[2] ); glVertex3f( -w ,  h ,  d );
-		glTexCoord2f( TXTx[0] , TXTy[2] ); glVertex3f( -w ,  h , -d );
-
-		// Face direita
-		glNormal3f(    1.0 , 0.0 ,  0.0 );	// Normal da face
-		glTexCoord2f( TXTx[2] , TXTy[1] ); glVertex3f(  w , -h ,  d );
-		glTexCoord2f( TXTx[3] , TXTy[1] ); glVertex3f(  w , -h , -d );
-		glTexCoord2f( TXTx[3] , TXTy[2] ); glVertex3f(  w ,  h , -d );
-		glTexCoord2f( TXTx[2] , TXTy[2] ); glVertex3f(  w ,  h ,  d );
-
-	glEnd();
+    // Executa os comandos OpenGL
+    glutSwapBuffers();
 }
 
-
-void drawSimpleCircle(point pnt, int raio, float prof, int segmentos)
+// Funcao usada para especificar a projecao ortogonal do help
+void especifica_parametros_visualizacao_help( void )
 {
-	point at;
-	float ang;
-	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
-		ang =  2 * M_PI * i / segmentos;
-		at.x = raio * cos( ang );
-		at.y = raio * sin( ang );
-		glVertex3f( pnt.x + at.x , pnt.y + at.y , pnt.z - prof);
-	}
+    // seleciona o tipo de matriz para a projecao
+    glMatrixMode( GL_PROJECTION );
+
+    // limpa (zera) as matrizes
+    glLoadIdentity();
+
+    glClearColor( 0.0 , 0.0 , 0.0 , 1.0 );
+
+    gluOrtho2D(  0 , LAR_HELP , 0 , ALT_HELP );
 }
 
-void drawMainCircle( float prof, int segmentos)
+// Funcao callback chamada quando o tamanho da janela do help eh alterado
+void altera_tamanho_janela_help( GLsizei largura , GLsizei altura )
 {
-	float ang;
-	point at, ant, hp;	// Atual, Anterior, helice point
-	glBegin( GL_TRIANGLE_STRIP );
-	glColor4f(0.7, 0.7, 0.7, 1.0);
-	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
-		ang =  2 * M_PI * i / segmentos;
-		at.x = RH * cos( ang );
-		at.y = RH * sin( ang );
-		glVertex3f( CH.x + at.x , CH.y + at.y , CH.z - prof);
-		glVertex3f( CH.x + at.x , CH.y + at.y , CH.z);
-	}
-	glEnd();
+    glutReshapeWindow( LAR_HELP , ALT_HELP );
 
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
-		ang =  2 * M_PI * i / segmentos;
-		at.x = RH * cos( ang );
-		at.y = RH * sin( ang );
-
-		if (i==0) {ant = at; continue;}
-
-		if (CH.y + at.y >= CH.y)		// Superior
-			if (CH.x + at.x <= CH.x)			// Esquerdo
-				hp = HA;
-			else 								// Direito
-				hp = HB;
-		else 							// Inferior
-			if (CH.x + at.x <= CH.x)			// Esquerdo
-				hp = HD;
-			else 								// Direito
-				hp = HC;
-
-		glBegin( GL_TRIANGLES );
-			glVertex3f( CH.x + ant.x , CH.y + ant.y , CH.z);
-			glVertex3f( hp.x , hp.y , hp.z);
-			glVertex3f( CH.x + at.x , CH.y + at.y , CH.z);
-		glEnd();
-
-		ant = at;
-	}
-
-	glBegin( GL_TRIANGLE_FAN );
-		glColor4f(0.5, 0.5, 0.5, 1.0);
-		drawSimpleCircle(CH, RH, prof, segmentos);
-	glEnd();
+    especifica_parametros_visualizacao_help();
 }
 
-void myVertex3f(point pnt)
+// ************************************************************
+// FUNÇÕES ILUMINAÇÃO E VISUALIZAÇÃO
+// ************************************************************
+
+// Funcao que cunfigura o uso da iluminacao
+void define_iluminacao( void )
 {
-	glVertex3f(pnt.x, pnt.y, pnt.z);
+    // define os parametros da fonte de luz numero 0
+    for( int i = 0 ; i < LUZES ; i++ )
+    {
+        glLightfv( GL_LIGHT0 + i , GL_AMBIENT  , ambiente );
+        glLightfv( GL_LIGHT0 + i , GL_DIFFUSE  , luz[ i ].difusa );
+        glLightfv( GL_LIGHT0 + i , GL_SPECULAR , luz[ i ].especular );
+        glLightfv( GL_LIGHT0 + i , GL_POSITION , luz[ i ].posicao );
+    }
+
+    // habilita a criacao automatica da normal
+    glEnable( GL_AUTO_NORMAL );
+    // habilita a normalizacao do vetor normal
+    glEnable( GL_NORMALIZE );
+    // ativa o uso da luz ambiente - caso a luz 0 seja desligada
+    glLightModelfv( GL_LIGHT_MODEL_AMBIENT , ambiente );
+    // habilita a definicao da cor do material a partir da cor corrente
+    glEnable( GL_COLOR_MATERIAL );
+    // habilita o uso da iluminacao
+    glEnable( GL_LIGHTING );
+
+    // habilita a fonte de luz numero 0
+    if ( luz[ 0 ].ligada )
+        glEnable( GL_LIGHT0 );
+    else
+        glDisable( GL_LIGHT0 );
+
+    // habilita o modelo de colorizacao de Gouraud
+    if ( tonalizacao == 'F' )
+        glShadeModel( GL_FLAT );
+    else
+        glShadeModel( GL_SMOOTH );
 }
 
-void desenhaFrente()
+// Funcao usada para especificar o volume de visualizacao
+void especifica_parametros_visualizacao( void )
 {
-	drawMainCircle( 20, 200 );
+    // seleciona o tipo de matriz para a projecao
+    glMatrixMode( GL_PROJECTION );
 
-	glBegin( GL_TRIANGLE_STRIP );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(HB);
-		myVertex3f(FA);
-		myVertex3f(HA);
-		myVertex3f(FD);
-		myVertex3f(HD);
-		myVertex3f(FC);
-		myVertex3f(HC);
-		myVertex3f(FB);
-		myVertex3f(HB);
-		myVertex3f(FA);
-	glEnd();
+    // limpa (zera) as matrizes
+    glLoadIdentity();
+
+    // Especifica e configura a projecao perspectiva
+    gluPerspective( camera.ang , janela.aspecto , camera.inicio , camera.fim );
+
+    // Especifica sistema de coordenadas do modelo
+    glMatrixMode( GL_MODELVIEW );
+
+    // Inicializa sistema de coordenadas do modelo
+    glLoadIdentity();
+
+    // Especifica posicao da camera (o observador) e do alvo
+    gluLookAt( camera.posx , camera.posy , camera.posz , camera.alvox , camera.alvoy , camera.alvoz ,0,1,0);
 }
 
-void desenhaAtras()
+// Funcao callback chamada quando o tamanho da janela eh alterado
+void altera_tamanho_janela( GLsizei largura , GLsizei altura )
 {
-	glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(TD);
-		myVertex3f(TC);
-		myVertex3f(TB);
-		myVertex3f(TA);
-	glEnd();
+    janela.largura = largura;
+    janela.altura  = altura;
+
+    // Para previnir uma divisao por zero
+    if ( janela.altura == 0 ) janela.altura = 1;
+
+    // Especifica as dimensıes da viewport
+    glViewport( 0 , 0 , janela.largura , janela.altura );
+
+    // Calcula o aspecto
+    janela.aspecto = janela.largura / janela.altura;
+
+    especifica_parametros_visualizacao();
 }
 
-void desenhaCima()
+// ************************************************************
+// FUNÇÕES DESENHO
+// ************************************************************
+
+// Hélice
+void desenha_helice(void)
 {
-	glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(CD);
-		myVertex3f(CC);
-		myVertex3f(CB);
-		myVertex3f(CA);
-	glEnd();
-}
-
-void desenhaBaixo()
-{
-	glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(BD);
-		myVertex3f(BC);
-		myVertex3f(BB);
-		myVertex3f(BA);
-	glEnd();
-}
-
-void desenhaLadoEsquerdo()
-{
-	glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(LED);
-		myVertex3f(LEC);
-		myVertex3f(LEB);
-		myVertex3f(LEA);
-	glEnd();
-}
-
-void desenhaLadoDireito()
-{
-	glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(LDD);
-		myVertex3f(LDC);
-		myVertex3f(LDB);
-		myVertex3f(LDA);
-	glEnd();
-}
-
-void desenhaEsferaCanto(point pnt, float offsetZ, int cortes)
-{
-	glPushMatrix();
-		glTranslatef( pnt.x , pnt.y , pnt.z+offsetZ );
-		glutSolidSphere(RC, cortes, cortes );
-	glPopMatrix();
-}
-
-void desenhaCilindroLado(float x, float y, float z, float h, char rot, int cortes)
-{
-	GLUquadricObj *qobj;
-	qobj = gluNewQuadric();
-
-	glPushMatrix();
-		glTranslatef( x , y , z );
-		if (rot == '|')
-			glRotatef( 90, 1 , 0 , 0 );
-		else if (rot == '-')
-			glRotatef( 90 , 0 , 1 , 0 );
-		else if (rot == '.')
-			glRotatef( 180 , 1 , 0 , 0 );
-		gluCylinder( qobj , RC , RC , h , cortes , cortes );
-	glPopMatrix();
-
-	gluDeleteQuadric( qobj );
-}
-
-void desenhaCaixaAr(void)
-{
-	SRT(CAIXA);
-
-	// glBegin( GL_POINTS );
-	// 	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-	// 	myVertex3f(FA);
-	// 	myVertex3f(FB);
-	// 	myVertex3f(FC);
-	// 	myVertex3f(FD);
-	// 	myVertex3f(CH);
-	// 	myVertex3f(HA);
-	// 	myVertex3f(HB);
-	// 	myVertex3f(HC);
-	// 	myVertex3f(HD);
-	// 	myVertex3f(CA);
-	// 	myVertex3f(CB);
-	// 	myVertex3f(CD);
-	// 	myVertex3f(CC);
-	// 	myVertex3f(LDA);
-	// 	myVertex3f(LDB);
-	// 	myVertex3f(LDC);
-	// 	myVertex3f(LDD);
-	// 	myVertex3f(BA);
-	// 	myVertex3f(BB);
-	// 	myVertex3f(BC);
-	// 	myVertex3f(BD);
-	// 	myVertex3f(LEA);
-	// 	myVertex3f(LEB);
-	// 	myVertex3f(LEC);
-	// 	myVertex3f(LED);
-	// 	myVertex3f(TA);
-	// 	myVertex3f(TB);
-	// 	myVertex3f(TC);
-	// 	myVertex3f(TD);
-	// glEnd();
-
-	desenhaEsferaCanto(FA, -RC, 20);
-	desenhaEsferaCanto(FB, -RC, 20);
-	desenhaEsferaCanto(FC, -RC, 20);
-	desenhaEsferaCanto(FD, -RC, 20);
-
-	desenhaEsferaCanto(TA, RC, 20);
-	desenhaEsferaCanto(TB, RC, 20);
-	desenhaEsferaCanto(TC, RC, 20);
-	desenhaEsferaCanto(TD, RC, 20);
-
-	desenhaCilindroLado(FA.x, FA.y, FA.z-RC, arAltura, '|', 20);
-	desenhaCilindroLado(FB.x, FB.y, FB.z-RC, arAltura, '|', 20);
-	desenhaCilindroLado(FA.x, FA.y, FA.z-RC, arLargura, '-', 20);
-	desenhaCilindroLado(FD.x, FD.y, FD.z-RC, arLargura, '-', 20);
-
-	desenhaCilindroLado(TA.x, TA.y, TA.z+RC, arAltura, '|', 20);
-	desenhaCilindroLado(TB.x, TB.y, TB.z+RC, arAltura, '|', 20);
-	desenhaCilindroLado(TB.x, TB.y, TB.z+RC, arLargura, '-', 20);
-	desenhaCilindroLado(TC.x, TC.y, TC.z+RC, arLargura, '-', 20);
-
-	desenhaCilindroLado(FA.x, FA.y, FA.z-RC, arProfundidade-RC, '.', 20);
-	desenhaCilindroLado(FB.x, FB.y, FB.z-RC, arProfundidade-RC, '.', 20);
-	desenhaCilindroLado(FC.x, FC.y, FC.z-RC, arProfundidade-RC, '.', 20);
-	desenhaCilindroLado(FD.x, FD.y, FD.z-RC, arProfundidade-RC, '.', 20);
-
-	desenhaFrente();
-	desenhaAtras();
-	desenhaCima();
-	desenhaBaixo();
-	desenhaLadoEsquerdo();
-	desenhaLadoDireito();
-
-	glPopMatrix();
-
-
-	// Executa os comandos OpenGL
-	glutSwapBuffers();
-}
-
-// Funcao responsavel por desenhar os objetos
-void desenhaHelice(void)
-{
-    GLUquadricObj *quadObj = gluNewQuadric(); // Objeto quádrico para o cilindro central
+    GLUquadricObj *quadObj = gluNewQuadric(); // Quádrico p/ cilindro
     gluQuadricTexture(quadObj, GL_TRUE);
     gluQuadricDrawStyle(quadObj, GLU_FILL);
 
@@ -652,389 +382,411 @@ void desenhaHelice(void)
     glPopMatrix();
 }
 
-// Função callback de redesenho da janela de visualização
-void Desenha(void)
+// Funcao responsavel por desenhar os objetos
+void desenha(void)
 {
-	// Limpa a janela de visualização com a cor
-	// de fundo definida previamente
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // Limpa a janela de visualizao com a cor de fundo especificada
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	// Chama a função que especifica os parâmetros de iluminação
-	DefineIluminacao();
+    // Seleciona o tipo de matriz para a visualizacao dos objetos (modelos)
+    glMatrixMode(GL_MODELVIEW);
 
+    glTranslatef( transf.dx , transf.dy , transf.dz );
+    glRotatef( transf.angx , 1 , 0 , 0 );
+    glRotatef( transf.angy , 0 , 1 , 0 );
+    glRotatef( transf.angz , 0 , 0 , 1 );
+    glScalef( transf.sx , transf.sy , transf.sz );
 
-	glColor3f(1.0f, 1.0f, 1.0f);
-	// Função da GLUT para fazer o desenho de um "torus"
-	// com a cor corrente
-	glPushMatrix();
-	SRT(CENA);
+    glPushMatrix();
+        desenha_helice();
+    glPopMatrix();
 
-	desenhaCaixaAr();
-	//desenhaHelice();
-	// Desenha grade
-	// Desenha .....
-
-
-	glPopMatrix();
-
-	// Executa os comandos OpenGL
-	glutSwapBuffers();
+    // Executa os comandos OpenGL
+    glutSwapBuffers();
 }
 
-// Função usada para especificar a posição do observador virtual
-void PosicionaObservador(void)
+// ************************************************************
+// INICIALIZA
+// ************************************************************
+
+void inicializa( void )
 {
-	// Especifica sistema de coordenadas do modelo
-	glMatrixMode(GL_MODELVIEW);
-	// Inicializa sistema de coordenadas do modelo
-	glLoadIdentity();
-	DefineIluminacao();
-	// Posiciona e orienta o observador
-	glTranslatef(-obsX,-obsY,-obsZ);
-	glRotatef(rotX,1,0,0);
-	glRotatef(rotY,0,1,0);
-}
+    // Define a cor de fundo da janela de visualizacao como preta
+    //             R     G     B    alfa
+    glClearColor( 0.0 , 0.0 , 0.0 , 1.0 );
 
-// Função usada para especificar o volume de visualização
-void EspecificaParametrosVisualizacao(void)
-{
-	// Especifica sistema de coordenadas de projeção
-	glMatrixMode(GL_PROJECTION);
-	// Inicializa sistema de coordenadas de projeção
-	glLoadIdentity();
+    transf.dx     = 0.0;
+    transf.dy     = 0.0;
+    transf.dz     = 0.0;
+    transf.sx     = 1.0;
+    transf.sy     = 1.0;
+    transf.sz     = 1.0;
+    transf.angx   = 0.0;
+    transf.angy   = 0.0;
+    transf.angz   = 0.0;
 
-	// Especifica a projeção perspectiva(angulo,aspecto,zMin,zMax)
-	gluPerspective(angle,fAspect,0.5,5000);
+    camera.posx   = 0;
+    camera.posy   = 0;
+    camera.posz   = 500;
+    camera.alvox  = 0;
+    camera.alvoy  = 0;
+    camera.alvoz  = 0;
+    camera.inicio = 0.1;
+    camera.fim    = 5000.0;
+    camera.ang    = 45;
 
-	PosicionaObservador();
-}
+    transformacao = 'T';
+    eixo          = 'X';
+    tonalizacao   = 'S';
+    vertice       = 1;
+    passo         = 5;
 
+    ambiente[ 0 ] = 0.2;
+    ambiente[ 1 ] = 0.2;
+    ambiente[ 2 ] = 0.2;
+    ambiente[ 3 ] = 1.0;
 
-// Função responsável por inicializar parâmetros e variáveis
-void Inicializa (void)
-{
-	// Define a cor de fundo da janela de visualização como branca
-	glClearColor(0.1, 0.1, 0.1, 1.0);
+    // cor
+    luz[ 0 ].difusa[ 0 ] = 0.7;
+    luz[ 0 ].difusa[ 1 ] = 0.7;
+    luz[ 0 ].difusa[ 2 ] = 0.7;
+    luz[ 0 ].difusa[ 3 ] = 1.0;
 
-	// Habilita a definição da cor do material a partir da cor corrente
-	glEnable(GL_COLOR_MATERIAL);
-	//Habilita o uso de iluminação
-	glEnable(GL_LIGHTING);
-	// Habilita a luz de número 0
-	glEnable(GL_LIGHT0);
-	// Habilita o depth-buffering
-	glEnable(GL_DEPTH_TEST);
+    // brilho
+    luz[ 0 ].especular[ 0 ] = 0.9;
+    luz[ 0 ].especular[ 1 ] = 0.9;
+    luz[ 0 ].especular[ 2 ] = 0.9;
+    luz[ 0 ].especular[ 3 ] = 1.0;
 
-	// ativa a possibilidade de transparência dos objetos - canal alfa
-	glEnable( GL_BLEND );
+    // posicao
+    luz[ 0 ].posicao[ 0 ] =    0.0;
+    luz[ 0 ].posicao[ 1 ] =    0.0;
+    luz[ 0 ].posicao[ 2 ] =  500.0;
+    luz[ 0 ].posicao[ 3 ] =    1.0;
 
-	// define a forma de cálculo da transparência
-	glBlendFunc( GL_SRC_ALPHA , GL_ONE_MINUS_SRC_ALPHA );
+    luz[ 0 ].ligada = true;
 
-	// Habilita antialiasing
-	glEnable( GL_LINE_SMOOTH );
+    // capacidade de brilho do material
+    especularidade[ 0 ] = 0.9;
+    especularidade[ 1 ] = 0.9;
+    especularidade[ 2 ] = 0.9;
+    especularidade[ 3 ] = 1.0;
+    espec_material = 50;
 
-	// Solicita melhor qualidade
-	glHint( GL_LINE_SMOOTH_HINT , GL_NICEST );
-
-	// ativa a remoçào das faces ocultas
-	glEnable( GL_CULL_FACE );
-
-	// Habilita o modelo de colorização de Gouraud
-	glShadeModel(GL_SMOOTH);
-
-	// Para curvas bezier
+    // habilita a transparenica
+    glEnable( GL_BLEND );
+    // define a forma de calculo da transparencia
+    glBlendFunc( GL_SRC_ALPHA , GL_ONE_MINUS_SRC_ALPHA );
+    // Habilita antialiasing
+    glEnable( GL_LINE_SMOOTH );
+    // Solicita melhor qualidade
+    glHint( GL_LINE_SMOOTH_HINT , GL_NICEST );
+    // sentido de criacao da face - frente da face - default: GL_CCW
+    glFrontFace( GL_CW );
+    // Habilita a remocao de faces
+    glEnable( GL_CULL_FACE );
+    // remove faces traseiras - default: traseiras
+    glCullFace( GL_BACK );
+    // habilita o z-buffer
+    glEnable( GL_DEPTH_TEST );
+    // habilita map para curvas bezier
     glEnable( GL_MAP2_VERTEX_3 );
 
-	for(int i = 0 ; i < NUM_OBJETOS ; i++)
-	{
-		transf[ i ].dx   = 0.0;
-		transf[ i ].dy   = 0.0;
-		transf[ i ].dz   = 0.0;
-		transf[ i ].sx   = 1.0;
-		transf[ i ].sy   = 1.0;
-		transf[ i ].sz   = 1.0;
-		transf[ i ].angx = 0.0;
-		transf[ i ].angy = 0.0;
-		transf[ i ].angz = 0.0;
-	}
+    define_iluminacao();
 
-	objeto = CENA;
-	transformacao = 'T';
-	eixo = 'X';
-	passo = 5;
+    glutSetWindow( jan[ 0 ] );
+    glutReshapeWindow( LAR_HELP , ALT_HELP );
+    glutPositionWindow( 10 , 10 );
 
-	// Inicializa a variável que especifica o ângulo da projeção
-	// perspectiva
-	angle=45;
+    glutSetWindow( jan[ 1 ] );
+    glutReshapeWindow( LAR_INFO , ALT_INFO );
+    glutPositionWindow( 10 , 400 );
 
-	// Inicializa as variáveis usadas para alterar a posição do
-	// observador virtual
-	rotX = 0;
-	rotY = 0;
-	obsX = obsY = 0;
-	obsZ = 200;
-
-	Texturizacao();
-
-	cout << endl;
-	cout  << "Mouse      Movimenta observador" << endl;
-	cout  << "ESC        Sair" << endl;
-	cout  << "ALT  +     Aumenta passo" << endl;
-	cout  << "ALT  -     Diminui passo" << endl;
-	cout  << "HOME       Diminui angulo de abertura da camera" << endl;
-	cout  << "END        Aumenta angulo de abertura da camera" << endl;
-	cout  << "I          Inicializa" << endl;
-	cout  << "X Y Z      Escolhe eixo" << endl;
-	cout  << "S R T      Escolhe transformação" << endl;
-	cout  << "+ -        Aplica transformação" << endl;
-	cout  << "  0        Seleciona cena" << endl;
-	cout  << "  1        Seleciona ar condicionado" << endl;
-	cout << endl;
+    glutSetWindow( jan[ 2 ] );
+    glutReshapeWindow( LAR_MAIN , ALT_MAIN );
+    glutPositionWindow( ( glutGet( GLUT_SCREEN_WIDTH  ) - LAR_MAIN ) / 2 ,
+                        ( glutGet( GLUT_SCREEN_HEIGHT ) - ALT_MAIN ) / 2 );
 }
 
-// Função callback chamada para gerenciar eventos de teclas normais (ESC)
-void Teclado ( GLubyte key , GLint x , GLint y )
+// ************************************************************
+// FUNÇÕES TECLADO
+// ************************************************************
+
+// Funcao de tratamento do teclado
+void teclado( unsigned char key , GLint x , GLint y )
 {
-	GLint modificador = glutGetModifiers();
+    GLint modificador = glutGetModifiers();
 
-	if ( modificador & GLUT_ACTIVE_ALT)
-	{
-		// ALT pressionado
-		if( key == '-' || key == '_' )
-			if( passo - 1 > 0 )
-				passo--;
+    if ( modificador & GLUT_ACTIVE_ALT)
+    {
+        // ALT pressionado
+        if( key == '-' || key == '_' )
+            if( passo - 1 > 0 )
+                passo--;
 
-		if( key == '+' || key == '=' )
-			passo++;
-	}
-	else
-	{
-		if ( key == 27 )
-			exit( 0 );
+        if( key == '+' || key == '=' )
+            passo++;
+    }
+    else
+    {
+        if ( key == 27 )
+            exit( 0 );
 
-		if ( toupper( key ) == 'I' )
-			Inicializa();
+        if ( key >= '1' && key <= '4' )
+            vertice = key-48;
 
-		if ( toupper( key ) == 'X' || toupper( key ) == 'Y' || toupper( key ) == 'Z')
-			eixo = toupper( key );
+        if ( toupper( key ) == 'L' )
+        {
+            luz[ 0 ].ligada = !luz[ 0 ].ligada;
+            if ( luz[ 0 ].ligada )
+                glEnable( GL_LIGHT0 );
+            else
+                glDisable( GL_LIGHT0 );
+        }
 
-		if ( toupper( key ) == 'S' || toupper( key ) == 'R' || toupper( key ) == 'T' )
-			transformacao = toupper( key );
+        if ( toupper( key ) == 'F')
+        {
+            if ( tonalizacao == 'F' )
+                tonalizacao = 'S';
+            else
+                tonalizacao = 'F';
+            define_iluminacao();
+        }
 
-		if (key-'0' >= 0 && key-'0' <= NUM_OBJETOS-1)
-			objeto = key - '0';
+        if ( toupper( key ) == 'I' )
+            inicializa();
 
-		if ( key == 'l' || key == 'L' )
-		{
-			if( glIsEnabled( GL_LINE_SMOOTH ) )
-				glDisable( GL_LINE_SMOOTH );
-			else
-				glEnable( GL_LINE_SMOOTH );
-		}
+        if ( toupper( key ) == 'X' || toupper( key ) == 'Y' || toupper( key ) == 'Z')
+            eixo = toupper( key );
 
-		if ( key == '+' || key == '=')
-			switch( transformacao ){
-				case 'S':
-					if ( eixo == 'X')
-						transf[ objeto ].sx += 0.1;
-					if ( eixo == 'Y')
-						transf[ objeto ].sy += 0.1;
-					if ( eixo == 'Z')
-						transf[ objeto ].sz += 0.1;
-					break;
+        if ( toupper( key ) == 'S' || toupper( key ) == 'R' || toupper( key ) == 'T' )
+            transformacao = toupper( key );
 
-				case 'R':
-					if ( eixo == 'X')
-						transf[ objeto ].angx += passo;
-					if ( eixo == 'Y')
-						transf[ objeto ].angy += passo;
-					if ( eixo == 'Z')
-						transf[ objeto ].angz += passo;
-					break;
+        if ( key == 'A')
+            if ( camera.ang+passo < 180 )
+                camera.ang += passo;
 
-				case 'T':
-					if ( eixo == 'X')
-						transf[ objeto ].dx += passo;
-					if ( eixo == 'Y')
-						transf[ objeto ].dy += passo;
-					if ( eixo == 'Z')
-						transf[ objeto ].dz += passo;
-					break;
-			}
+        if ( key == 'a')
+            if ( camera.ang-passo > 0 )
+                camera.ang -= passo;
 
-		if ( key == '-' || key == '_' )
-			switch( transformacao ){
-				case 'S':
-					if ( eixo == 'X')
-						transf[ objeto ].sx -= 0.1;
-					if ( eixo == 'Y')
-						transf[ objeto ].sy -= 0.1;
-					if ( eixo == 'Z')
-						transf[ objeto ].sz -= 0.1;
-					break;
+        if ( key == '+' || key == '=')
+            switch( transformacao ){
+                case 'S':
+                    if ( eixo == 'X')
+                        transf.sx += 0.1;
+                    if ( eixo == 'Y')
+                        transf.sy += 0.1;
+                    if ( eixo == 'Z')
+                        transf.sz += 0.1;
+                    break;
 
-				case 'R':
-					if ( eixo == 'X')
-						transf[ objeto ].angx -= passo;
-					if ( eixo == 'Y')
-						transf[ objeto ].angy -= passo;
-					if ( eixo == 'Z')
-						transf[ objeto ].angz -= passo;
-					break;
+                case 'R':
+                    if ( eixo == 'X')
+                        transf.angx += passo;
+                    if ( eixo == 'Y')
+                        transf.angy += passo;
+                    if ( eixo == 'Z')
+                        transf.angz += passo;
+                    break;
 
-				case 'T':
-					if ( eixo == 'X')
-						transf[ objeto ].dx -= passo;
-					if ( eixo == 'Y')
-						transf[ objeto ].dy -= passo;
-					if ( eixo == 'Z')
-						transf[ objeto ].dz -= passo;
-					break;
-			}
+                case 'T':
+                    if ( eixo == 'X')
+                        transf.dx += passo;
+                    if ( eixo == 'Y')
+                        transf.dy += passo;
+                    if ( eixo == 'Z')
+                        transf.dz += passo;
+                    break;
+            }
 
-	}
+        if ( key == '-' || key == '_' )
+            switch( transformacao ){
+                case 'S':
+                    if ( eixo == 'X')
+                        transf.sx -= 0.1;
+                    if ( eixo == 'Y')
+                        transf.sy -= 0.1;
+                    if ( eixo == 'Z')
+                        transf.sz -= 0.1;
+                    break;
 
-	if ( modificador || (key != '+' && key != '=' && key != '-' && key != '_') )
-		cout << endl
-			 << "    Objeto selecionado: " << objetos[objeto] << endl
-			 << "    Transformação: " << transformacao
-			 << "    Eixo: " << eixo
-			 << "    Passo: " << passo << endl;
+                case 'R':
+                    if ( eixo == 'X')
+                        transf.angx -= passo;
+                    if ( eixo == 'Y')
+                        transf.angy -= passo;
+                    if ( eixo == 'Z')
+                        transf.angz -= passo;
+                    break;
 
-	EspecificaParametrosVisualizacao();
+                case 'T':
+                    if ( eixo == 'X')
+                        transf.dx -= passo;
+                    if ( eixo == 'Y')
+                        transf.dy -= passo;
+                    if ( eixo == 'Z')
+                        transf.dz -= passo;
+                    break;
+            }
 
-	// obriga redesenhar
-	glutPostRedisplay();
+    }
+    especifica_parametros_visualizacao();
 
+    glutSetWindow( jan[ 1 ] );
+    glutPostRedisplay();
+
+    glutSetWindow( jan[ 2 ] );
+    glutPostRedisplay();
 }
 
-// Função callback para tratar eventos de teclas especiais
-void TeclasEspeciais (int tecla, int x, int y)
+// Tratamento das teclas especiais (teclas de funcao e de navegacao).
+// os parametros que recebe sao a tecla pressionada e a posicao x e y
+void teclas_especiais( GLint key , GLint x , GLint y )
 {
-	switch (tecla)
-	{
-		case GLUT_KEY_HOME:	if(angle>=10)  angle -=5;
-							break;
-		case GLUT_KEY_END:	if(angle<=150) angle +=5;
-							break;
-	}
-	EspecificaParametrosVisualizacao();
-	glutPostRedisplay();
+    int l , c;
+
+    GLint modificador = glutGetModifiers();
+
+    if ( modificador & GLUT_ACTIVE_ALT)
+    {
+        // ALT pressionado
+
+        if ( key == GLUT_KEY_LEFT )
+            luz[ 0 ].posicao[ 0 ] -= passo*3;
+
+        if ( key == GLUT_KEY_RIGHT )
+            luz[ 0 ].posicao[ 0 ] += passo*3;
+
+        if ( key == GLUT_KEY_UP )
+            luz[ 0 ].posicao[ 1 ] += passo*3;
+
+        if ( key == GLUT_KEY_DOWN )
+            luz[ 0 ].posicao[ 1 ] -= passo*3;
+
+        if ( key == GLUT_KEY_PAGE_UP )
+            luz[ 0 ].posicao[ 2 ] += passo*3;
+
+        if ( key == GLUT_KEY_PAGE_DOWN)
+            luz[ 0 ].posicao[ 2 ] -= passo*3;
+
+        define_iluminacao();
+    }
+    if ( modificador & GLUT_ACTIVE_CTRL )
+    {
+        // CTRL pressionado
+
+        l = c = 0;
+        switch( vertice )
+        {
+            case 2 :
+                c = 7;
+                break;
+            case 3 :
+                l = 7;
+                break;
+            case 4:
+                l = 7;
+                c = 7;
+                break;
+        }
+
+        define_iluminacao();
+    }
+    if( !modificador )
+    {
+        if ( key == GLUT_KEY_LEFT )
+        {
+            camera.posx  -= passo;
+            camera.alvox -= passo;
+        }
+
+        if ( key == GLUT_KEY_RIGHT )
+        {
+            camera.posx  += passo;
+            camera.alvox += passo;
+        }
+
+        if ( key == GLUT_KEY_UP )
+        {
+            camera.posy  += passo;
+            camera.alvoy += passo;
+        }
+
+        if ( key == GLUT_KEY_DOWN )
+        {
+            camera.posy  -= passo;
+            camera.alvoy -= passo;
+        }
+
+        if ( key == GLUT_KEY_PAGE_UP ) // aumenta o tamanho da window
+        {
+            camera.posz  -= passo;
+            camera.alvoz -= passo;
+        }
+
+        if ( key == GLUT_KEY_PAGE_DOWN) // diminui o tamanho da window
+        {
+            camera.posz  += passo;
+            camera.alvoz += passo;
+        }
+    }
+    especifica_parametros_visualizacao();
+
+    glutSetWindow( jan[ 2 ] );
+    glutPostRedisplay();
 }
 
-// Função callback para eventos de botões do mouse
-void GerenciaMouse(int button, int state, int x, int y)
+
+// ************************************************************
+// MAIN
+// ************************************************************
+
+int main( int argc , char *argv[] )
 {
-	if(state==GLUT_DOWN)
-	{
-		// Salva os parâmetros atuais
-		x_ini = x;
-		y_ini = y;
-		obsX_ini = obsX;
-		obsY_ini = obsY;
-		obsZ_ini = obsZ;
-		rotX_ini = rotX;
-		rotY_ini = rotY;
-		bot = button;
-	}
-	else bot = -1;
-}
+    glutInit( &argc , argv );
 
-// Função callback para eventos de movimento do mouse
-#define SENS_ROT	5.0
-#define SENS_OBS	10.0
-#define SENS_TRANSL	10.0
-void GerenciaMovim(int x, int y)
-{
-	// Botão esquerdo ?
-	if(bot==GLUT_LEFT_BUTTON)
-	{
-		// Calcula diferenças
-		int deltax = x_ini - x;
-		int deltay = y_ini - y;
-		// E modifica ângulos
-		rotY = rotY_ini - deltax/SENS_ROT;
-		rotX = rotX_ini - deltay/SENS_ROT;
-	}
-	// Botão direito ?
-	else if(bot==GLUT_RIGHT_BUTTON)
-	{
-		// Calcula diferença
-		int deltaz = y_ini - y;
-		// E modifica distância do observador
-		obsZ = obsZ_ini + deltaz/SENS_OBS;
-	}
-	// Botão do meio ?
-	else if(bot==GLUT_MIDDLE_BUTTON)
-	{
-		// Calcula diferenças
-		int deltax = x_ini - x;
-		int deltay = y_ini - y;
-		// E modifica posições
-		obsX = obsX_ini + deltax/SENS_TRANSL;
-		obsY = obsY_ini - deltay/SENS_TRANSL;
-	}
-	PosicionaObservador();
-	glutPostRedisplay();
-}
+    glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH );
 
-// Função callback chamada quando o tamanho da janela é alterado
-void AlteraTamanhoJanela(GLsizei w, GLsizei h)
-{
-	// Para previnir uma divisão por zero
-	if ( h == 0 ) h = 1;
+    // janela do help
+    glutInitWindowSize( LAR_HELP , ALT_HELP );
+    glutInitWindowPosition( 10 , 10 );
+    jan[ 0 ] = glutCreateWindow( "HELP" );
 
-	// Especifica as dimensões da viewport
-	glViewport(0, 0, w, h);
+    // janela do help
+    glutInitWindowSize( LAR_INFO , ALT_INFO );
+    glutInitWindowPosition( 10 , 400 );
+    jan[ 1 ] = glutCreateWindow( "INFO" );
 
-	// Calcula a correção de aspecto
-	fAspect = (GLfloat)w/(GLfloat)h;
+    // janela principal
+    glutInitWindowSize( LAR_MAIN , ALT_MAIN );
+    glutInitWindowPosition( ( glutGet( GLUT_SCREEN_WIDTH  ) - LAR_MAIN ) / 2 ,
+                           ( glutGet( GLUT_SCREEN_HEIGHT ) - ALT_MAIN  ) / 2 );
+    jan[ 2 ] = glutCreateWindow( "ILUMINACAO" );
 
-	EspecificaParametrosVisualizacao();
-}
+    // callbacks da janela de help
+    glutSetWindow( jan[ 0 ] );
+    glutDisplayFunc( desenha_help );
+    glutReshapeFunc( altera_tamanho_janela_help );
 
-// Programa Principal
-int main(int argc , char *argv[])
-{
-	glutInit( &argc , argv );
+    // callbacks da janela de help
+    glutSetWindow( jan[ 1 ] );
+    glutDisplayFunc( desenha_info );
+    glutReshapeFunc( altera_tamanho_janela_info );
 
-	// Define o modo de operação da GLUT
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    // callbacks da janela principal
+    glutSetWindow( jan[ 2 ] );
+    glutDisplayFunc( desenha );
+    glutKeyboardFunc( teclado );
+    glutSpecialFunc( teclas_especiais );
+    glutReshapeFunc( altera_tamanho_janela );
 
-	// Especifica o tamanho inicial em pixels da janela GLUT
-	glutInitWindowSize(LARGURA, ALTURA);
+    // funcao que tem as inicializacoes de variaveis e estados do OpenGL
+    inicializa();
 
-	// Especifica a posição inicial da janela GLUT
-	glutInitWindowPosition( ( glutGet( GLUT_SCREEN_WIDTH  ) - LARGURA ) / 2 ,
-							( glutGet( GLUT_SCREEN_HEIGHT ) - ALTURA  ) / 2 );
+    // Ultimo comando. Faz com que todas as janelas criadas sejam mostradas
+    // Uma vez neste loop, somente sai quando o programa encerra
+    glutMainLoop();
 
-	// Cria a janela passando como argumento o título da mesma
-	glutCreateWindow("Robo - Anderson A. Fontana");
-
-	// Registra a função callback de redesenho da janela de visualização
-	glutDisplayFunc(Desenha);
-
-	// Registra a função callback de redimensionamento da janela de visualização
-	glutReshapeFunc(AlteraTamanhoJanela);
-
-	// Registra a função callback para tratamento das teclas normais
-	glutKeyboardFunc (Teclado);
-
-	// Registra a função callback para tratamento das teclas especiais
-	glutSpecialFunc (TeclasEspeciais);
-
-	// Registra a função callback para eventos de botões do mouse
-	glutMouseFunc(GerenciaMouse);
-
-	// Registra a função callback para eventos de movimento do mouse
-	glutMotionFunc(GerenciaMovim);
-
-	// Chama a função responsável por fazer as inicializações
-	Inicializa();
-
-	// Inicia o processamento e aguarda interações do usuário
-	glutMainLoop();
-
-	return 0;
+    return 0;
 }
