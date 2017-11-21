@@ -381,6 +381,80 @@ void desenha_helice(void)
 
     glPopMatrix();
 }
+/*Cria uma grade. (0,0) é o ponto inferior esquerdo da grade, (x, y) é o ponto superior direito
+quantidade total de linhas que a grade tem e quantidade total de colunas(ambos incluindo bordas),
+profundidade é o tamanho das "pernas" da grade*/
+void desenha_grade(int x, int y, float linhas, float colunas, float raio, int profundidade){
+    float tamLin = y/linhas;
+    float tamCol = x/colunas;
+    GLUquadricObj *qobj;
+    qobj = gluNewQuadric();
+    long double i;
+    glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+    glPushMatrix();
+    glRotatef( 90, 0 , 1 , 0 );
+    for(i=0;i<=y;i+=tamLin){
+        glTranslatef( 0, tamLin, 0 );
+        gluCylinder(qobj, raio, raio, y, 10, 10);
+    }
+    glPopMatrix();
+    glPushMatrix();
+    for(i=0;i<=y;i+=tamLin){
+        glTranslatef( 0, tamLin, 0 );
+        gluCylinder(qobj, raio, raio, profundidade, 10, 10);
+    }
+    glPopMatrix();
+    glPushMatrix();
+    glTranslatef( x, 0, 0 );
+    for(i=0;i<=y;i+=tamLin){
+        glTranslatef( 0, tamLin, 0 );
+        gluCylinder(qobj, raio, raio, profundidade, 10, 10);
+    }
+    glPopMatrix();
+    glPushMatrix();
+    glTranslatef( -tamCol, y+tamLin, raio*2 );
+    glRotatef( 90, 1 , 0 , 0 );
+    for(i=0;i<=x;i+=tamCol){
+        glTranslatef( tamCol, 0, 0 );
+        gluCylinder(qobj, raio, raio, x, 10, 10);
+    }
+    glPopMatrix();
+    glPushMatrix();
+    glTranslatef( -tamCol, y+tamLin, 0 );
+    for(i=0;i<=x;i+=tamCol){
+        glTranslatef( tamCol, 0, 0 );
+        gluCylinder(qobj, raio, raio, profundidade, 10, 10);
+    }
+    glPopMatrix();
+    glPushMatrix();
+    glTranslatef( -tamCol, tamLin, 0 );
+    for(i=0;i<=x;i+=tamCol){
+        glTranslatef( tamCol, 0, 0 );
+        gluCylinder(qobj, raio, raio, profundidade, 10, 10);
+    }
+    glPopMatrix();
+    gluDeleteQuadric(qobj);
+}
+
+void gradeLado(){
+    int x = 50;
+    int y = 50;
+    float linhas = 12.0;
+    float colunas = 4.0;
+    int profundidade = 3;
+    float raio = 0.1;
+    desenha_grade(x,y,linhas,colunas,raio, profundidade);
+}
+
+void gradeFrente(){
+    int x = 50;
+    int y = 50;
+    float linhas = 38.0;
+    float colunas = 5.0;
+    int profundidade = 2;
+    float raio = 0.05;
+    desenha_grade(x,y,linhas,colunas,raio, profundidade);
+}
 
 // Funcao responsavel por desenhar os objetos
 void desenha(void)
