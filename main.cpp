@@ -35,6 +35,8 @@ using namespace std;
 #define M_PI 3.1415926
 #endif
 
+#define PI 3.14
+
 #define LARGURA		800
 #define ALTURA		600
 
@@ -82,6 +84,8 @@ struct point
 {
 	float x, y, z;
 };
+
+// ----------------------------------- VARIÁVEIS CAIXA AR CONDICIONADO -----------------------------------
 
 int arLargura = 86;
 int arAltura = 60;
@@ -131,6 +135,23 @@ point TB = {FA.x, FA.y, FA.z-arProfundidade-RC};
 point TC = {FD.x, FD.y, FD.z-arProfundidade-RC};
 point TD = {FC.x, FC.y, FC.z-arProfundidade-RC};
 
+
+// ----------------------------------- VARIÁVEIS P/ HÉLICE -----------------------------------
+
+// Numero de vértices para a curva bezier
+GLint numero_vertices_helice = 8;
+
+// Vertices que forma a curva bezier
+GLfloat vertices_helice[ 8 ][ 8 ][ 3 ] = {
+    {{  90 , -30 , 110 },{ 70 , -27 , 110 },{ 50 , -25 , 117 },{ 30 , -20 , 113 },{  0 , -15 , 120 },{ -10 , -10 , 117 },{ -30 , -5 , 113 },{ -50 , 0 , 110 }} ,
+    {{ 100 , -30 , 100 },{ 80 , -27 ,  98 },{ 60 , -25 ,  97 },{ 40 , -20 ,  96 },{ 20 , -15 ,  95 },{   0 , -10 ,  94 },{ -20 , -5 ,  92 },{ -45 , 0 ,  90 }} ,
+    {{  70 , -30 ,  90 },{ 50 , -27 ,  88 },{ 35 , -25 ,  87 },{ 20 , -20 ,  86 },{  5 , -15 ,  85 },{ -10 , -10 ,  84 },{ -25 , -5 ,  82 },{ -40 , 0 ,  80 }} ,
+    {{  55 , -30 ,  70 },{ 40 , -27 ,  70 },{ 30 , -25 ,  70 },{ 20 , -20 ,  70 },{  5 , -15 ,  70 },{  -5 , -10 ,  70 },{ -20 , -5 ,  70 },{ -35 , 0 ,  70 }} ,
+    {{  40 , -30 ,  60 },{ 30 , -27 ,  58 },{ 20 , -25 ,  57 },{ 10 , -20 ,  56 },{  0 , -15 ,  55 },{ -10 , -10 ,  54 },{ -20 , -5 ,  52 },{ -30 , 0 ,  50 }} ,
+    {{  30 , -30 ,  40 },{ 25 , -27 ,  42 },{ 20 , -25 ,  43 },{ 10 , -20 ,  44 },{  0 , -15 ,  45 },{ -10 , -10 ,  46 },{ -20 , -5 ,  48 },{ -30 , 0 ,  50 }} ,
+    {{  25 , -30 ,  20 },{ 20 , -27 ,  20 },{ 15 , -25 ,  20 },{ 10 , -20 ,  20 },{  0 , -15 ,  20 },{ -10 , -10 ,  20 },{ -20 , -5 ,  20 },{ -25 , 0 ,  20 }} ,
+    {{  20 , -30 ,   0 },{ 15 , -27 , -10 },{ 10 , -25 , -15 },{  5 , -20 ,   0 },{  0 , -15 ,   0 },{  -5 , -10 ,   0 },{ -15 , -5 ,   0 },{ -20 , 0 ,   0 }}
+};
 
 int LoadBMP(char* filename)
 {
@@ -386,7 +407,7 @@ void drawMainCircle( float prof, int segmentos)
 				hp = HD;
 			else 								// Direito
 				hp = HC;
-			
+
 		glBegin( GL_TRIANGLES );
 			glVertex3f( CH.x + ant.x , CH.y + ant.y , CH.z);
 			glVertex3f( hp.x , hp.y , hp.z);
@@ -584,6 +605,52 @@ void desenhaCaixaAr(void)
 	glutSwapBuffers();
 }
 
+// Funcao responsavel por desenhar os objetos
+void desenhaHelice(void)
+{
+    GLUquadricObj *quadObj = gluNewQuadric(); // Objeto quádrico para o cilindro central
+    gluQuadricTexture(quadObj, GL_TRUE);
+    gluQuadricDrawStyle(quadObj, GLU_FILL);
+
+    glColor4f( 1.0 , 1.0 , 0.0 , 1.0 );
+
+    glPushMatrix(); // CENA
+
+        glPushMatrix(); // CILINDRO
+
+            gluCylinder(quadObj, 20, 20, 40, 20, 20);
+
+            glTranslatef(0, 0, 40);
+            glRotatef(180, 1, 0, 0);
+            glBegin(GL_POLYGON);
+                int radius = 20;
+                for(double i = 0; i < 2 * PI; i += PI / 50)
+ 					glVertex3f(cos(i) * radius, sin(i) * radius, 0.0);
+            glEnd();
+
+            glPushMatrix(); // HÉLICES
+
+                glTranslatef(0, 0, 40);
+                glRotatef(90, 1, 0, 0);
+
+                glMap2f( GL_MAP2_VERTEX_3 , 0.0 , 1.0 , 3 , 8 , 0 , 1 , 3 * numero_vertices_helice , numero_vertices_helice , &vertices_helice[ 0 ][ 0 ][ 0 ] );
+                glMapGrid2f( 20 , 0 , 1.0 , 20 , 0 , 1.0 );
+
+                glRotatef( 0 , 0 , 1 , 0 );
+                glEvalMesh2( GL_FILL , 0 , 20 , 0 , 20 );
+                glRotatef( 90 , 0 , 1 , 0 );
+                glEvalMesh2( GL_FILL , 0 , 20 , 0 , 20 );
+                glRotatef( 180 , 0 , 1 , 0 );
+                glEvalMesh2( GL_FILL , 0 , 20 , 0 , 20 );
+                glRotatef( -90 , 0 , 1 , 0 );
+                glEvalMesh2( GL_FILL , 0 , 20 , 0 , 20 );
+
+            glPopMatrix();
+
+        glPopMatrix();
+
+    glPopMatrix();
+}
 
 // Função callback de redesenho da janela de visualização
 void Desenha(void)
@@ -603,7 +670,7 @@ void Desenha(void)
 	SRT(CENA);
 
 	desenhaCaixaAr();
-	// Desenha hélice
+	//desenhaHelice();
 	// Desenha grade
 	// Desenha .....
 
@@ -675,6 +742,9 @@ void Inicializa (void)
 
 	// Habilita o modelo de colorização de Gouraud
 	glShadeModel(GL_SMOOTH);
+
+	// Para curvas bezier
+    glEnable( GL_MAP2_VERTEX_3 );
 
 	for(int i = 0 ; i < NUM_OBJETOS ; i++)
 	{
