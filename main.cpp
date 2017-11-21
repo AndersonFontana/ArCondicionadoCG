@@ -19,12 +19,14 @@
 #include <sstream>
 
 #if __APPLE__
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#include <GLUT/glut.h>
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+	#include <OpenGL/gl.h>
+	#include <OpenGL/glu.h>
+	#include <GLUT/glut.h>
+	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif linux
+	#include <GL/glut.h>
 #else
-#include <gl/glut.h>
+	#include <gl/glut.h>
 #endif
 
 using namespace std;
@@ -107,6 +109,63 @@ char  transformacao, eixo, tonalizacao;
 
 // controle das janelas, passo de atualizacao dos parametros das transformacoes e qual objeto mostrar
 GLint jan[ JANELAS ], passo, vertice;
+
+// ************************************************************
+// VARIÁVEIS CAIXA
+// ************************************************************
+
+struct point
+{
+	float x, y, z;
+};
+
+int arLargura = 86;
+int arAltura = 60;
+int arProfundidade = 30;
+int diametroHelice = 40;
+
+int RH = diametroHelice/2;		// Raio da hélice
+point FA = {-(arLargura/2), arAltura/2, arProfundidade/2};	// Canto Superior Esquerdo
+point FB = {FA.x+arLargura, FA.y, FA.z};					// Canto Superior Direito
+point FC = {FA.x+arLargura, FA.y-arAltura, FA.z};			// Canto Inferior Direito
+point FD = {FA.x, FA.y-arAltura, FA.z};						// Canto Inferior Esquerdo
+
+point CH = {FA.x+(arLargura/3), FA.y-(arAltura/2), FA.z};	// Centro da Hélice
+point HA = {CH.x-RH, CH.y+RH, CH.z};						// Canto Superior Esquerdo da Hélice
+point HB = {CH.x+RH, CH.y+RH, CH.z};						// Canto Superior Direito da Hélice
+point HC = {CH.x+RH, CH.y-RH, CH.z};						// Canto Inferior Direito da Hélice
+point HD = {CH.x-RH, CH.y-RH, CH.z};						// Canto Inferior Esquerdo da Hélice
+
+float RC = 2;		// Raio dos Cantos
+// Pontos de Cima
+point CA = {FA.x, FA.y+RC, FA.z-arProfundidade};
+point CB = {FB.x, FB.y+RC, FB.z-arProfundidade};
+point CD = {FA.x, FA.y+RC, FA.z-RC};
+point CC = {FB.x, FB.y+RC, FB.z-RC};
+
+// Pontos do Lado Direito
+point LDA = {FB.x+RC, FB.y, FB.z-RC};
+point LDB = {FB.x+RC, FB.y, FB.z-arProfundidade};
+point LDC = {FC.x+RC, FC.y, FC.z-arProfundidade};
+point LDD = {FC.x+RC, FC.y, FC.z-RC};
+
+// Pontos de Baixo
+point BA = {FD.x, FD.y-RC, FD.z-RC};
+point BB = {FC.x, FC.y-RC, FC.z-RC};
+point BC = {FC.x, FC.y-RC, FC.z-arProfundidade};
+point BD = {FD.x, FD.y-RC, FD.z-arProfundidade};
+
+// Pontos do Lado Esquerdo
+point LEA = {FA.x-RC, FA.y, FA.z-arProfundidade};
+point LEB = {FA.x-RC, FA.y, FA.z-RC};
+point LEC = {FD.x-RC, FD.y, FD.z-RC};
+point LED = {FD.x-RC, FD.y, FD.z-arProfundidade};
+
+// Pontos de Tras
+point TA = {FB.x, FB.y, FB.z-arProfundidade-RC};
+point TB = {FA.x, FA.y, FA.z-arProfundidade-RC};
+point TC = {FD.x, FD.y, FD.z-arProfundidade-RC};
+point TD = {FC.x, FC.y, FC.z-arProfundidade-RC};
 
 // ************************************************************
 // VARIÁVEIS HÉLICE
@@ -344,6 +403,9 @@ void desenha_helice(void)
 
     glColor4f( 1.0 , 1.0 , 0.0 , 1.0 );
 
+    glScalef(0.14, 0.14, 0.14);
+    glTranslatef(-100, 0, 0);
+
     glPushMatrix(); // CENA
 
         glPushMatrix(); // CILINDRO
@@ -382,6 +444,258 @@ void desenha_helice(void)
     glPopMatrix();
 }
 
+
+void drawSimpleCircle(point pnt, int raio, float prof, int segmentos)
+{
+	point at;
+	float ang;
+	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
+		ang =  2 * M_PI * i / segmentos;
+		at.x = raio * cos( ang );
+		at.y = raio * sin( ang );
+		glVertex3f( pnt.x + at.x , pnt.y + at.y , pnt.z - prof);
+	}
+}
+
+void drawMainCircle( float prof, int segmentos)
+{
+	float ang;
+	point at, ant, hp;	// Atual, Anterior, helice point
+	glBegin( GL_TRIANGLE_STRIP );
+	glColor4f(0.7, 0.7, 0.7, 1.0);
+	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
+		ang =  2 * M_PI * i / segmentos;
+		at.x = RH * cos( ang );
+		at.y = RH * sin( ang );
+		glVertex3f( CH.x + at.x , CH.y + at.y , CH.z - prof);
+		glVertex3f( CH.x + at.x , CH.y + at.y , CH.z);
+	}
+	glEnd();
+
+	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
+		ang =  2 * M_PI * i / segmentos;
+		at.x = RH * cos( ang );
+		at.y = RH * sin( ang );
+
+		if (i==0) {ant = at; continue;}
+
+		if (CH.y + at.y >= CH.y)		// Superior
+			if (CH.x + at.x <= CH.x)			// Esquerdo
+				hp = HA;
+			else 								// Direito
+				hp = HB;
+		else 							// Inferior
+			if (CH.x + at.x <= CH.x)			// Esquerdo
+				hp = HD;
+			else 								// Direito
+				hp = HC;
+			
+		glBegin( GL_TRIANGLES );
+			glVertex3f( CH.x + ant.x , CH.y + ant.y , CH.z);
+			glVertex3f( hp.x , hp.y , hp.z);
+			glVertex3f( CH.x + at.x , CH.y + at.y , CH.z);
+		glEnd();
+
+		ant = at;
+	}
+
+	glBegin( GL_TRIANGLE_FAN );
+		glColor4f(0.5, 0.5, 0.5, 0.5);
+		drawSimpleCircle(CH, RH, prof, segmentos);
+	glEnd();
+}
+
+void myVertex3f(point pnt)
+{
+	glVertex3f(pnt.x,   pnt.y,  pnt.z);
+}
+
+void desenhaFrente()
+{
+	drawMainCircle( 20, 200 );
+
+	glBegin( GL_TRIANGLE_STRIP );
+	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+		myVertex3f(HB);
+		myVertex3f(FA);
+		myVertex3f(HA);
+		myVertex3f(FD);
+		myVertex3f(HD);
+		myVertex3f(FC);
+		myVertex3f(HC);
+		myVertex3f(FB);
+		myVertex3f(HB);
+		myVertex3f(FA);
+	glEnd();
+}
+
+void desenhaAtras()
+{
+	glBegin( GL_QUADS );
+	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+		myVertex3f(TD);
+		myVertex3f(TC);
+		myVertex3f(TB);
+		myVertex3f(TA);
+	glEnd();
+}
+
+void desenhaCima()
+{
+	glBegin( GL_QUADS );
+	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+		myVertex3f(CD);
+		myVertex3f(CC);
+		myVertex3f(CB);
+		myVertex3f(CA);
+	glEnd();
+}
+
+void desenhaBaixo()
+{
+	glBegin( GL_QUADS );
+	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+		myVertex3f(BD);
+		myVertex3f(BC);
+		myVertex3f(BB);
+		myVertex3f(BA);
+	glEnd();
+}
+
+void desenhaLadoEsquerdo()
+{
+	glBegin( GL_QUADS );
+	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+		myVertex3f(LED);
+		myVertex3f(LEC);
+		myVertex3f(LEB);
+		myVertex3f(LEA);
+	glEnd();
+}
+
+void desenhaLadoDireito()
+{
+	glBegin( GL_QUADS );
+	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+		myVertex3f(LDD);
+		myVertex3f(LDC);
+		myVertex3f(LDB);
+		myVertex3f(LDA);
+	glEnd();
+}
+
+void desenhaEsferaCanto(point pnt, float offsetZ, int cortes) {
+	// GLUquadricObj *qobj;
+	// qobj = gluNewQuadric();
+
+	// glPolygonMode(GL_FRONT_AND_BACK, GL_FILL );
+	// gluQuadricDrawStyle( qobj,  GLU_FILL );
+
+	glPushMatrix();
+		glTranslatef( pnt.x , pnt.y , pnt.z+offsetZ );
+		// gluSphere( qobj, RC, cortes, cortes );
+		glutSolidSphere(RC, cortes, cortes );
+	glPopMatrix();
+
+	// gluDeleteQuadric( qobj );
+}
+
+void desenhaCilindroLado(float x, float y, float z, float h, char rot, int cortes) {
+	GLUquadricObj *qobj;
+	qobj = gluNewQuadric();
+
+	// glPolygonMode(GL_FRONT_AND_BACK, GL_FILL );
+	// gluQuadricDrawStyle( qobj,  GLU_FILL );
+
+	glPushMatrix();
+		glTranslatef( x , y , z );
+		if (rot == '|')
+			glRotatef( 90, 1 , 0 , 0 );
+		else if (rot == '-')
+			glRotatef( 90 , 0 , 1 , 0 );
+		else if (rot == '.')
+			glRotatef( 180 , 1 , 0 , 0 );
+		gluCylinder( qobj , RC , RC , h , cortes , cortes );
+	glPopMatrix();
+
+	gluDeleteQuadric( qobj );
+}
+
+void desenha_arCondicionado(void)
+{
+	glPushMatrix();
+
+		// glBegin( GL_POINTS );
+		// 	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+		// 	myVertex3f(FA);
+		// 	myVertex3f(FB);
+		// 	myVertex3f(FC);
+		// 	myVertex3f(FD);
+		// 	myVertex3f(CH);
+		// 	myVertex3f(HA);
+		// 	myVertex3f(HB);
+		// 	myVertex3f(HC);
+		// 	myVertex3f(HD);
+		// 	myVertex3f(CA);
+		// 	myVertex3f(CB);
+		// 	myVertex3f(CD);
+		// 	myVertex3f(CC);
+		// 	myVertex3f(LDA);
+		// 	myVertex3f(LDB);
+		// 	myVertex3f(LDC);
+		// 	myVertex3f(LDD);
+		// 	myVertex3f(BA);
+		// 	myVertex3f(BB);
+		// 	myVertex3f(BC);
+		// 	myVertex3f(BD);
+		// 	myVertex3f(LEA);
+		// 	myVertex3f(LEB);
+		// 	myVertex3f(LEC);
+		// 	myVertex3f(LED);
+		// 	myVertex3f(TA);
+		// 	myVertex3f(TB);
+		// 	myVertex3f(TC);
+		// 	myVertex3f(TD);
+		// glEnd();
+
+		desenhaFrente();
+		desenhaAtras();
+		desenhaCima();
+		desenhaBaixo();
+		desenhaLadoEsquerdo();
+		desenhaLadoDireito();
+
+		desenhaEsferaCanto(FA, -RC, 20);
+		desenhaEsferaCanto(FB, -RC, 20);
+		desenhaEsferaCanto(FC, -RC, 20);
+		desenhaEsferaCanto(FD, -RC, 20);
+
+		desenhaEsferaCanto(TA, RC, 20);
+		desenhaEsferaCanto(TB, RC, 20);
+		desenhaEsferaCanto(TC, RC, 20);
+		desenhaEsferaCanto(TD, RC, 20);
+
+		desenhaCilindroLado(FA.x, FA.y, FA.z-RC, arAltura, '|', 20);
+		desenhaCilindroLado(FB.x, FB.y, FB.z-RC, arAltura, '|', 20);
+		desenhaCilindroLado(FA.x, FA.y, FA.z-RC, arLargura, '-', 20);
+		desenhaCilindroLado(FD.x, FD.y, FD.z-RC, arLargura, '-', 20);
+
+		desenhaCilindroLado(TA.x, TA.y, TA.z+RC, arAltura, '|', 20);
+		desenhaCilindroLado(TB.x, TB.y, TB.z+RC, arAltura, '|', 20);
+		desenhaCilindroLado(TB.x, TB.y, TB.z+RC, arLargura, '-', 20);
+		desenhaCilindroLado(TC.x, TC.y, TC.z+RC, arLargura, '-', 20);
+
+		desenhaCilindroLado(FA.x, FA.y, FA.z-RC, arProfundidade-RC, '.', 20);
+		desenhaCilindroLado(FB.x, FB.y, FB.z-RC, arProfundidade-RC, '.', 20);
+		desenhaCilindroLado(FC.x, FC.y, FC.z-RC, arProfundidade-RC, '.', 20);
+		desenhaCilindroLado(FD.x, FD.y, FD.z-RC, arProfundidade-RC, '.', 20);
+
+		desenha_helice();
+
+	glPopMatrix();
+}
+
 // Funcao responsavel por desenhar os objetos
 void desenha(void)
 {
@@ -397,9 +711,10 @@ void desenha(void)
     glRotatef( transf.angz , 0 , 0 , 1 );
     glScalef( transf.sx , transf.sy , transf.sz );
 
-    glPushMatrix();
-        desenha_helice();
-    glPopMatrix();
+    // glPushMatrix();
+    desenha_arCondicionado();
+    //     desenha_helice();
+    // glPopMatrix();
 
     // Executa os comandos OpenGL
     glutSwapBuffers();
@@ -413,7 +728,7 @@ void inicializa( void )
 {
     // Define a cor de fundo da janela de visualizacao como preta
     //             R     G     B    alfa
-    glClearColor( 0.0 , 0.0 , 0.0 , 1.0 );
+    glClearColor( 0.1 , 0.1 , 0.1 , 1.0 );
 
     transf.dx     = 0.0;
     transf.dy     = 0.0;
@@ -427,7 +742,7 @@ void inicializa( void )
 
     camera.posx   = 0;
     camera.posy   = 0;
-    camera.posz   = 500;
+    camera.posz   = 200;
     camera.alvox  = 0;
     camera.alvoy  = 0;
     camera.alvoz  = 0;
@@ -461,7 +776,7 @@ void inicializa( void )
     // posicao
     luz[ 0 ].posicao[ 0 ] =    0.0;
     luz[ 0 ].posicao[ 1 ] =    0.0;
-    luz[ 0 ].posicao[ 2 ] =  500.0;
+    luz[ 0 ].posicao[ 2 ] =  300.0;
     luz[ 0 ].posicao[ 3 ] =    1.0;
 
     luz[ 0 ].ligada = true;
@@ -484,7 +799,7 @@ void inicializa( void )
     // sentido de criacao da face - frente da face - default: GL_CCW
     glFrontFace( GL_CW );
     // Habilita a remocao de faces
-    glEnable( GL_CULL_FACE );
+    // glEnable( GL_CULL_FACE );
     // remove faces traseiras - default: traseiras
     glCullFace( GL_BACK );
     // habilita o z-buffer
