@@ -1,4 +1,6 @@
 a.out
+main.o
+main.exe
 
 bin/
 obj/
