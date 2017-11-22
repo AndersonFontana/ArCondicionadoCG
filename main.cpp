@@ -527,7 +527,7 @@ void drawSimpleCircle(point pnt, int raio, float prof, int segmentos)
 	point at;
 	float ang;
 	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
-		ang =  2 * M_PI * i / segmentos;
+		ang =  2 * PI * i / segmentos;
 		at.x = raio * cos( ang );
 		at.y = raio * sin( ang );
 		glVertex3f( pnt.x + at.x , pnt.y + at.y , pnt.z - prof);
@@ -543,7 +543,7 @@ void drawMainCircle( float prof, int segmentos)
 	glBegin( GL_TRIANGLE_STRIP );
 	glColor4f(0.7, 0.7, 0.7, 1.0);
 	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
-		ang =  2 * M_PI * i / segmentos;
+		ang =  2 * PI * i / segmentos;
 		at.x = RH * cos( ang );
 		at.y = RH * sin( ang );
 		glVertex3f( CH.x + at.x , CH.y + at.y , CH.z - prof);
@@ -553,7 +553,7 @@ void drawMainCircle( float prof, int segmentos)
 
 	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
 	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
-		ang =  2 * M_PI * i / segmentos;
+		ang =  2 * PI * i / segmentos;
 		at.x = RH * cos( ang );
 		at.y = RH * sin( ang );
 
