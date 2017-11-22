@@ -13,6 +13,9 @@
 //
 // ************************************************************
 
+#include <stdlib.h>
+#include <stdio.h>
+
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
@@ -48,6 +51,10 @@ using namespace std;
 
 #define LAR_HELP  600
 #define ALT_HELP  240
+
+
+#define NUM_TEX   1
+#define TEXTURA1  1000
 
 // ************************************************************
 // VARIÁVEIS GERAIS
@@ -103,6 +110,8 @@ tipo_luz luz[ LUZES ];
 GLfloat especularidade[ 4 ];
 GLfloat ambiente[ 4 ];
 GLint   espec_material;
+
+GLuint  texture_id[ NUM_TEX ];
 
 // transformacao atual, eixo atual
 char  transformacao, eixo, tonalizacao;
@@ -189,6 +198,94 @@ GLint numero_vertices_helice = 8;
 // ************************************************************
 // FUNÇÕES GERAIS
 // ************************************************************
+
+int LoadBMP(char* filename)
+{
+    #define SAIR        {fclose(fp_arquivo); return -1;}
+    #define CTOI(C)     (*(int*)&C)
+
+    GLubyte     *image;
+    GLubyte     Header[0x54];
+    GLuint      DataPos, imageSize;
+    GLsizei     Width,Height;
+
+    // Abre o arquivo e efetua a leitura do Header do arquivo BMP
+    FILE * fp_arquivo = fopen(filename,"rb");
+    if (!fp_arquivo)
+        return -1;
+    if (fread(Header,1,0x36,fp_arquivo)!=0x36)
+        SAIR;
+    if (Header[0]!='B' || Header[1]!='M')
+        SAIR;
+    if (CTOI(Header[0x1E])!=0)
+        SAIR;
+    if (CTOI(Header[0x1C])!=24)
+        SAIR;
+
+    // cout << "ASFASISSF!" << endl;
+    // Recupera a informação dos atributos de
+    // altura e largura da imagem
+    Width   = CTOI(Header[0x12]);
+    Height  = CTOI(Header[0x16]);
+    ( CTOI(Header[0x0A]) == 0 ) ? ( DataPos=0x36 ) : ( DataPos = CTOI(Header[0x0A]) );
+
+    imageSize=Width*Height*3;
+
+    // Efetura a Carga da Imagem
+    // image = (GLubyte *) malloc ( imageSize );
+    image = new GLubyte[imageSize];
+    int retorno;
+    retorno = fread(image,1,imageSize,fp_arquivo);
+
+    if (retorno != imageSize) {
+        delete (image);
+        SAIR;
+    }
+
+    // Inverte os valores de R e B
+    int t, i;
+
+    for ( i = 0; i < imageSize; i += 3 )
+    {
+        t = image[i];
+        image[i] = image[i+2];
+        image[i+2] = t;
+    }
+
+    // Tratamento da textura para o OpenGL
+
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S    ,GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T    ,GL_REPEAT);
+
+    glTexEnvf ( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+
+    // Faz a geraçao da textura na memória
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, Width, Height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+
+    fclose (fp_arquivo);
+    delete (image);
+    return 1;
+}
+
+void Texturizacao() // faz o carregamento
+{
+    glEnable(GL_TEXTURE_2D);
+    glPixelStorei ( GL_UNPACK_ALIGNMENT, 1 );//Como armazena o pixel
+    glGenTextures ( NUM_TEX , texture_id );//armazena q qtidade de textura
+
+    texture_id[ 0 ] = TEXTURA1; // define um numero (identificacao) para a textura
+    glBindTexture ( GL_TEXTURE_2D, texture_id[0] );//armazena na posição 0 do vetor
+    LoadBMP ( "Texturas/logo.bmp" ); // lê a textura
+
+    // texture_id[ 1 ] = TEXTURA2;
+    // glBindTexture ( GL_TEXTURE_2D, texture_id[1] );
+    // LoadBMP ( "Texturas/txtName.bmp" );
+
+    glTexGeni( GL_S , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
+    glTexGeni( GL_T , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
+}
 
 // Funcao para mostrar texto
 void mostra_texto_bitmap( float x , float y , string texto )
@@ -596,7 +693,7 @@ void desenhaFrente()
 
     glNormal3f( 0.0 , 0.0 , 1.0 );
 	glBegin( GL_TRIANGLE_STRIP );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+        glColor3f(1.0f, 1.0f, 1.0f);
 		myVertex3f(HB);
 		myVertex3f(FA);
 		myVertex3f(HA);
@@ -608,6 +705,19 @@ void desenhaFrente()
 		myVertex3f(HB);
 		myVertex3f(FA);
 	glEnd();
+
+    glBindTexture ( GL_TEXTURE_2D, TEXTURA1 );
+        glColor3f(0.8f, 0.8f, 0.8f);
+        glBegin( GL_QUADS );
+
+        // Face frontal
+        int padding = 5;
+        glNormal3f(   0.0 ,   0.0 ,  1.0 ); // Normal da face
+        glTexCoord2f( 0 , 0 ); glVertex3f( HB.x+padding, FC.y+padding, FC.z+0.1); //( -w , -h , d );
+        glTexCoord2f( 1 , 0 ); glVertex3f( FB.x-padding, FC.y+padding, FC.z+0.1); //(  w , -h , d );
+        glTexCoord2f( 1 , 1 ); glVertex3f( FB.x-padding, FB.y-padding, FC.z+0.1); //(  w ,  h , d );
+        glTexCoord2f( 0 , 1 ); glVertex3f( HB.x+padding, FB.y-padding, FC.z+0.1); //( -w ,  h , d );
+    glEnd();
 }
 
 void desenhaAtras()
@@ -873,6 +983,7 @@ void inicializa( void )
     especularidade[ 3 ] = 1.0;
     espec_material = 50;
 
+
     // habilita a transparenica
     glEnable( GL_BLEND );
     // define a forma de calculo da transparencia
@@ -906,6 +1017,7 @@ void inicializa( void )
     glutReshapeWindow( LAR_MAIN , ALT_MAIN );
     glutPositionWindow( ( glutGet( GLUT_SCREEN_WIDTH  ) - LAR_MAIN ) / 2 ,
                         ( glutGet( GLUT_SCREEN_HEIGHT ) - ALT_MAIN ) / 2 );
+    Texturizacao();
 }
 
 // ************************************************************
