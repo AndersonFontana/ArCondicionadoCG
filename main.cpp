@@ -52,9 +52,15 @@ using namespace std;
 #define LAR_HELP  600
 #define ALT_HELP  240
 
-
 #define NUM_TEX   1
 #define TEXTURA1  1000
+#define NUM_OBJETOS 5
+
+#define CENA 0
+#define CAIXA 1
+#define VENTILADOR 2
+#define GRADEF 3
+#define GRADEL 4
 
 // ************************************************************
 // VARIÁVEIS GERAIS
@@ -98,7 +104,7 @@ struct tipo_luz{
 tipo_camera camera;
 
 // definicao dos valores de transformacao
-tipo_transformacao transf;
+tipo_transformacao transf[ NUM_OBJETOS ];
 
 // definicao dos janela principal
 tipo_janela janela;
@@ -117,7 +123,7 @@ GLuint  texture_id[ NUM_TEX ];
 char  transformacao, eixo, tonalizacao;
 
 // controle das janelas, passo de atualizacao dos parametros das transformacoes e qual objeto mostrar
-GLint jan[ JANELAS ], passo, vertice;
+GLint jan[ JANELAS ], passo, objeto;
 
 // ************************************************************
 // VARIÁVEIS CAIXA
@@ -385,6 +391,16 @@ void desenha_help(void)
     glutSwapBuffers();
 }
 
+void SRT(int obj, GLfloat dx =0, GLfloat dy =0, GLfloat dz=0, GLfloat angx=0, GLfloat angy=0, GLfloat angz=0, GLfloat sx=1, GLfloat sy=1, GLfloat sz=1){
+    glTranslatef(transf[ obj ].dx + dx, transf[ obj ].dy + dy,transf[ obj ].dz + dz);
+
+    glRotatef( transf[obj].angx + angx, 1 , 0 , 0 );
+    glRotatef( transf[obj].angy + angy, 0 , 1 , 0 );
+    glRotatef( transf[obj].angz + angz, 0 , 0 , 1 );
+
+    glScalef( transf[obj].sx * sx, transf[obj].sy * sy, transf[obj].sz * sz );
+}
+
 // Funcao usada para especificar a projecao ortogonal do help
 void especifica_parametros_visualizacao_help( void )
 {
@@ -561,13 +577,14 @@ void desenha_grade(int x, int y, float linhas, float colunas, float raio, int pr
     }
     glPopMatrix();
     glPushMatrix();
+    glTranslatef( 0, 0, -profundidade );
     for(i=0;i<=y;i+=tamLin){
         glTranslatef( 0, tamLin, 0 );
         gluCylinder(qobj, raio, raio, profundidade, 10, 10);
     }
     glPopMatrix();
     glPushMatrix();
-    glTranslatef( x, 0, 0 );
+    glTranslatef( x, 0, -profundidade );
     for(i=0;i<=y;i+=tamLin){
         glTranslatef( 0, tamLin, 0 );
         gluCylinder(qobj, raio, raio, profundidade, 10, 10);
@@ -582,14 +599,14 @@ void desenha_grade(int x, int y, float linhas, float colunas, float raio, int pr
     }
     glPopMatrix();
     glPushMatrix();
-    glTranslatef( -tamCol, y+tamLin, 0 );
+    glTranslatef( -tamCol, y+tamLin, -profundidade );
     for(i=0;i<=x;i+=tamCol){
         glTranslatef( tamCol, 0, 0 );
         gluCylinder(qobj, raio, raio, profundidade, 10, 10);
     }
     glPopMatrix();
     glPushMatrix();
-    glTranslatef( -tamCol, tamLin, 0 );
+    glTranslatef( -tamCol, tamLin, -profundidade );
     for(i=0;i<=x;i+=tamCol){
         glTranslatef( tamCol, 0, 0 );
         gluCylinder(qobj, raio, raio, profundidade, 10, 10);
@@ -601,21 +618,27 @@ void desenha_grade(int x, int y, float linhas, float colunas, float raio, int pr
 void gradeLado(){
     int x = 50;
     int y = 50;
-    float linhas = 12.0;
+    float linhas = 5.0;
     float colunas = 4.0;
-    int profundidade = 3;
+    int profundidade = 5;
     float raio = 0.1;
+    glPushMatrix();
+        SRT(GRADEL,-48,-33,-14,0,-90,0,0.5);
     desenha_grade(x,y,linhas,colunas,raio, profundidade);
+    glPopMatrix();
 }
 
 void gradeFrente(){
     int x = 50;
     int y = 50;
-    float linhas = 38.0;
+    float linhas = 30.0;
     float colunas = 5.0;
     int profundidade = 2;
-    float raio = 0.05;
-    desenha_grade(x,y,linhas,colunas,raio, profundidade);
+    float raio = 0.1;
+    glPushMatrix();
+        SRT(GRADEF,-38,-25,16);
+        desenha_grade(x,y,linhas,colunas,raio, profundidade);
+    glPopMatrix();
 }
 
 
@@ -666,7 +689,7 @@ void drawMainCircle( float prof, int segmentos)
 				hp = HD;
 			else 								// Direito
 				hp = HC;
-		glNormal3f( 0.0 , 0.0 , 1.0 );	
+		glNormal3f( 0.0 , 0.0 , 1.0 );
 		glBegin( GL_TRIANGLES );
 			glVertex3f( CH.x + ant.x , CH.y + ant.y , CH.z);
 			glVertex3f( hp.x , hp.y , hp.z);
@@ -886,7 +909,17 @@ void desenha_arCondicionado(void)
 		desenhaCilindroLado(FC.x, FC.y, FC.z-RC, arProfundidade-RC, '.', 20);
 		desenhaCilindroLado(FD.x, FD.y, FD.z-RC, arProfundidade-RC, '.', 20);
 
-		desenha_helice();
+        glPushMatrix();
+            desenha_helice();
+		glPopMatrix();
+
+		glPushMatrix();
+            gradeFrente();
+        glPopMatrix();
+
+        glPushMatrix();
+            gradeLado();
+        glPopMatrix();
 
 	glPopMatrix();
 }
@@ -900,11 +933,12 @@ void desenha(void)
     // Seleciona o tipo de matriz para a visualizacao dos objetos (modelos)
     glMatrixMode(GL_MODELVIEW);
 
-    glTranslatef( transf.dx , transf.dy , transf.dz );
+    /*glTranslatef( transf.dx , transf.dy , transf.dz );
     glRotatef( transf.angx , 1 , 0 , 0 );
     glRotatef( transf.angy , 0 , 1 , 0 );
     glRotatef( transf.angz , 0 , 0 , 1 );
-    glScalef( transf.sx , transf.sy , transf.sz );
+    glScalef( transf.sx , transf.sy , transf.sz );*/
+    SRT(CENA);
 
     // glPushMatrix();
     desenha_arCondicionado();
@@ -925,15 +959,18 @@ void inicializa( void )
     //             R     G     B    alfa
     glClearColor( 0.1 , 0.1 , 0.1 , 1.0 );
 
-    transf.dx     = 0.0;
-    transf.dy     = 0.0;
-    transf.dz     = 0.0;
-    transf.sx     = 1.0;
-    transf.sy     = 1.0;
-    transf.sz     = 1.0;
-    transf.angx   = 0.0;
-    transf.angy   = 0.0;
-    transf.angz   = 0.0;
+    for( int i = 0 ; i < NUM_OBJETOS ; i++ )
+    {
+        transf[i].dx   = 0.0;
+        transf[i].dy   = 0.0;
+        transf[i].dz   = 0.0;
+        transf[i].sx   = 1.0;
+        transf[i].sy   = 1.0;
+        transf[i].sz   = 1.0;
+        transf[i].angx = 0.0;
+        transf[i].angy = 0.0;
+        transf[i].angz = 0.0;
+    }
 
     camera.posx   = 0;
     camera.posy   = 0;
@@ -948,7 +985,6 @@ void inicializa( void )
     transformacao = 'T';
     eixo          = 'X';
     tonalizacao   = 'S';
-    vertice       = 1;
     passo         = 5;
 
     ambiente[ 0 ] = 0.2;
@@ -1045,7 +1081,7 @@ void teclado( unsigned char key , GLint x , GLint y )
             exit( 0 );
 
         if ( key >= '1' && key <= '4' )
-            vertice = key-48;
+            objeto = key - 48;
 
         if ( toupper( key ) == 'L' )
         {
@@ -1082,66 +1118,65 @@ void teclado( unsigned char key , GLint x , GLint y )
             if ( camera.ang-passo > 0 )
                 camera.ang -= passo;
 
-        if ( key == '+' || key == '=')
+        if ( key == '-' || key == '_' ){
             switch( transformacao ){
                 case 'S':
                     if ( eixo == 'X')
-                        transf.sx += 0.1;
+                        transf[ objeto ].sx -= 0.1;
                     if ( eixo == 'Y')
-                        transf.sy += 0.1;
+                        transf[ objeto ].sy -= 0.1;
                     if ( eixo == 'Z')
-                        transf.sz += 0.1;
+                        transf[ objeto ].sz -= 0.1;
                     break;
 
                 case 'R':
                     if ( eixo == 'X')
-                        transf.angx += passo;
+                        transf[ objeto ].angx -= passo;
                     if ( eixo == 'Y')
-                        transf.angy += passo;
+                        transf[ objeto ].angy -= passo;
                     if ( eixo == 'Z')
-                        transf.angz += passo;
+                        transf[ objeto ].angz -= passo;
                     break;
 
                 case 'T':
                     if ( eixo == 'X')
-                        transf.dx += passo;
+                        transf[ objeto ].dx -= passo;
                     if ( eixo == 'Y')
-                        transf.dy += passo;
+                        transf[ objeto ].dy -= passo;
                     if ( eixo == 'Z')
-                        transf.dz += passo;
+                        transf[ objeto ].dz -= passo;
                     break;
             }
-
-        if ( key == '-' || key == '_' )
+        }else if ( key == '+' || key == '=' ){
             switch( transformacao ){
                 case 'S':
                     if ( eixo == 'X')
-                        transf.sx -= 0.1;
+                        transf[ objeto ].sx += 0.1;
                     if ( eixo == 'Y')
-                        transf.sy -= 0.1;
+                        transf[ objeto ].sy += 0.1;
                     if ( eixo == 'Z')
-                        transf.sz -= 0.1;
+                        transf[ objeto ].sz += 0.1;
                     break;
 
                 case 'R':
                     if ( eixo == 'X')
-                        transf.angx -= passo;
+                        transf[ objeto ].angx += passo;
                     if ( eixo == 'Y')
-                        transf.angy -= passo;
+                        transf[ objeto ].angy += passo;
                     if ( eixo == 'Z')
-                        transf.angz -= passo;
+                        transf[ objeto ].angz += passo;
                     break;
 
                 case 'T':
                     if ( eixo == 'X')
-                        transf.dx -= passo;
+                        transf[ objeto ].dx += passo;
                     if ( eixo == 'Y')
-                        transf.dy -= passo;
+                        transf[ objeto ].dy += passo;
                     if ( eixo == 'Z')
-                        transf.dz -= passo;
-                    break;
+                        transf[ objeto ].dz += passo;
+            break;
             }
-
+        }
     }
     especifica_parametros_visualizacao();
 
@@ -1189,19 +1224,6 @@ void teclas_especiais( GLint key , GLint x , GLint y )
         // CTRL pressionado
 
         l = c = 0;
-        switch( vertice )
-        {
-            case 2 :
-                c = 7;
-                break;
-            case 3 :
-                l = 7;
-                break;
-            case 4:
-                l = 7;
-                c = 7;
-                break;
-        }
 
         define_iluminacao();
     }
