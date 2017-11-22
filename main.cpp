@@ -317,6 +317,9 @@ void altera_tamanho_janela_help( GLsizei largura , GLsizei altura )
 // Funcao que cunfigura o uso da iluminacao
 void define_iluminacao( void )
 {
+    glMaterialfv( GL_FRONT , GL_SPECULAR , especularidade );
+    glMateriali( GL_FRONT , GL_SHININESS , espec_material );
+
     // define os parametros da fonte de luz numero 0
     for( int i = 0 ; i < LUZES ; i++ )
     {
@@ -535,6 +538,8 @@ void drawMainCircle( float prof, int segmentos)
 {
 	float ang;
 	point at, ant, hp;	// Atual, Anterior, helice point
+
+    glNormal3f( 0.0 , 0.0 , 1.0 );
 	glBegin( GL_TRIANGLE_STRIP );
 	glColor4f(0.7, 0.7, 0.7, 1.0);
 	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
@@ -564,7 +569,7 @@ void drawMainCircle( float prof, int segmentos)
 				hp = HD;
 			else 								// Direito
 				hp = HC;
-			
+		glNormal3f( 0.0 , 0.0 , 1.0 );	
 		glBegin( GL_TRIANGLES );
 			glVertex3f( CH.x + ant.x , CH.y + ant.y , CH.z);
 			glVertex3f( hp.x , hp.y , hp.z);
@@ -573,7 +578,7 @@ void drawMainCircle( float prof, int segmentos)
 
 		ant = at;
 	}
-
+    glNormal3f( 0.0 , 0.0 , 0.0 );
 	glBegin( GL_TRIANGLE_FAN );
 		glColor4f(0.5, 0.5, 0.5, 0.5);
 		drawSimpleCircle(CH, RH, prof, segmentos);
@@ -589,6 +594,7 @@ void desenhaFrente()
 {
 	drawMainCircle( 20, 200 );
 
+    glNormal3f( 0.0 , 0.0 , 1.0 );
 	glBegin( GL_TRIANGLE_STRIP );
 	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
 		myVertex3f(HB);
@@ -606,6 +612,7 @@ void desenhaFrente()
 
 void desenhaAtras()
 {
+    glNormal3f( 0.0 , 0.0 , -1.0 );
 	glBegin( GL_QUADS );
 	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
 		myVertex3f(TD);
@@ -617,18 +624,20 @@ void desenhaAtras()
 
 void desenhaCima()
 {
-	glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(CD);
-		myVertex3f(CC);
-		myVertex3f(CB);
-		myVertex3f(CA);
-	glEnd();
+    glNormal3f( 0.0 , 1.0 , 0.0 );
+    glBegin( GL_QUADS );
+    glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+        myVertex3f(CD);
+        myVertex3f(CC);
+        myVertex3f(CB);
+        myVertex3f(CA);
+    glEnd();
 }
 
 void desenhaBaixo()
 {
-	glBegin( GL_QUADS );
+    glNormal3f( 0.0 , -1.0 , 0.0 );
+    glBegin( GL_QUADS );
 	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
 		myVertex3f(BD);
 		myVertex3f(BC);
@@ -639,6 +648,7 @@ void desenhaBaixo()
 
 void desenhaLadoEsquerdo()
 {
+    glNormal3f( -1.0 , 0.0 , 0.0 );
 	glBegin( GL_QUADS );
 	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
 		myVertex3f(LED);
@@ -650,6 +660,7 @@ void desenhaLadoEsquerdo()
 
 void desenhaLadoDireito()
 {
+    glNormal3f( 1.0 , 0.0 , 0.0 );
 	glBegin( GL_QUADS );
 	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
 		myVertex3f(LDD);
@@ -842,23 +853,23 @@ void inicializa( void )
     luz[ 0 ].difusa[ 3 ] = 1.0;
 
     // brilho
-    luz[ 0 ].especular[ 0 ] = 0.9;
-    luz[ 0 ].especular[ 1 ] = 0.9;
-    luz[ 0 ].especular[ 2 ] = 0.9;
+    luz[ 0 ].especular[ 0 ] = 0.7;
+    luz[ 0 ].especular[ 1 ] = 0.7;
+    luz[ 0 ].especular[ 2 ] = 0.7;
     luz[ 0 ].especular[ 3 ] = 1.0;
 
     // posicao
     luz[ 0 ].posicao[ 0 ] =    0.0;
-    luz[ 0 ].posicao[ 1 ] =    0.0;
+    luz[ 0 ].posicao[ 1 ] =  300.0;
     luz[ 0 ].posicao[ 2 ] =  300.0;
     luz[ 0 ].posicao[ 3 ] =    1.0;
 
     luz[ 0 ].ligada = true;
 
     // capacidade de brilho do material
-    especularidade[ 0 ] = 0.9;
-    especularidade[ 1 ] = 0.9;
-    especularidade[ 2 ] = 0.9;
+    especularidade[ 0 ] = 0.6;
+    especularidade[ 1 ] = 0.6;
+    especularidade[ 2 ] = 0.6;
     especularidade[ 3 ] = 1.0;
     espec_material = 50;
 
