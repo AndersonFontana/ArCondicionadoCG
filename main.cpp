@@ -54,6 +54,7 @@ using namespace std;
 
 #define NUM_TEX   1
 #define TEXTURA1  1000
+#define TEXTURA2  1001
 #define NUM_OBJETOS 5
 
 #define CENA 0
@@ -200,6 +201,56 @@ GLfloat vertices_helice[ 8 ][ 8 ][ 3 ] = {
 
 // Número de vértices para a curva bezier
 GLint numero_vertices_helice = 8;
+// ************************************************************
+// VARIÁVEIS SUPORTE
+// ************************************************************
+GLfloat v[ 18 ][ 3 ] =
+{
+    { 50 ,  400 , 0 }, //0
+    {  -50 ,  400 , 0} , //1
+    {   -50 , -300 , 0 } , //2
+    {  50 , -300 , 0 },   //3
+
+    {  -50 , 400 , 40 },//4
+    {  -50 , -300 , 40 },//5
+
+    {  50 , 400 , 40 },//6
+    {  50 , -300 , 40 },   //7
+
+     {  -70 , 400 , 40 },//8
+    {  -70 , -300 , 40 },//9
+
+    { -70, 400, -70}, //10
+     {  -70 , -300 , -70 }, //11
+
+      {  70 , 400 , -70 },//12
+      {    70 , -300 , -70 }, //13
+
+       {  70 , 400 , 40 },//14
+      {    70 , -300 , 40 },//15
+
+      { 50 ,  400 , 40 }, //16
+      {  50 , -300 , 40 } , //17
+
+
+
+};
+
+GLfloat b[ 18 ][ 3 ] ={
+
+    { 18 ,  10 , 30 }, //0
+    {  -18 ,  10 , 30} , //1
+    {   -18 , 0 , 30 } , //2
+    {  18 , 0 , 30 },  //3
+
+    { -18 ,  20 , -90 }, //4
+    { -18 ,  0 , -90} , //5
+
+    { 18 ,  20 , -90 }, //6
+    {  18 , 0 , -90 },  //7
+
+
+};
 
 // ************************************************************
 // FUNÇÕES GERAIS
@@ -285,9 +336,9 @@ void Texturizacao() // faz o carregamento
     glBindTexture ( GL_TEXTURE_2D, texture_id[0] );//armazena na posição 0 do vetor
     LoadBMP ( "Texturas/logo.bmp" ); // lê a textura
 
-    // texture_id[ 1 ] = TEXTURA2;
-    // glBindTexture ( GL_TEXTURE_2D, texture_id[1] );
-    // LoadBMP ( "Texturas/txtName.bmp" );
+     texture_id[ 1 ] = TEXTURA2;
+     glBindTexture ( GL_TEXTURE_2D, texture_id[1] );
+     LoadBMP ( "Texturas/textura1.bmp" );
 
     glTexGeni( GL_S , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
     glTexGeni( GL_T , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
@@ -509,6 +560,156 @@ void altera_tamanho_janela( GLsizei largura , GLsizei altura )
 // ************************************************************
 // FUNÇÕES DESENHO
 // ************************************************************
+//Suporte
+void desenha_suporte(int trans_v, int trans_b ){
+GLUquadricObj *sup; // um objeto é criado
+sup = gluNewQuadric();
+
+
+glPushMatrix();
+glTranslatef(trans_v , -10 , -25);
+        glScalef( 0.1 , 0.1 , 0.1 );
+
+        //FRENTE
+            glBegin( GL_POLYGON );
+            glNormal3f(   0.0 ,   0.0 ,  1.0 );	// Normal da face
+                 glTexCoord2f( 1.0 ,  1.0 ); glVertex3fv( v[0] );
+                 glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( v[1] );
+                 glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( v[2] );
+                 glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( v[3] );
+            glEnd();
+
+        //ESQUERDA
+            glBegin( GL_POLYGON );
+             glNormal3f(   1.0 ,   0.0 ,  0.0 );
+                glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( v[1] );
+                glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( v[4] );
+                glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( v[5] );
+                glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( v[2] );
+            glEnd();
+
+        //DIREITA
+            glBegin( GL_POLYGON );
+            glNormal3f(   -1.0 ,   0.0 ,  0.0 );
+                glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( v[6] );
+                glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( v[0] );
+                glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( v[3] );
+                glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( v[7] );
+            glEnd();
+
+         //FRENTE_E
+         glBegin( GL_POLYGON );
+                glNormal3f(   0.0 ,   0.0 ,  1.0 );	// Normal da face
+                glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( v[4] );
+                glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( v[8] );
+                glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( v[9] );
+                glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( v[5] );
+            glEnd();
+
+        //LADO_ESQUERDO
+         glBegin( GL_POLYGON );
+                 glNormal3f(   -1.0 ,   0.0 ,  0.0 );
+                glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( v[8] );
+                glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( v[10] );
+                glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( v[11] );
+                glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( v[9] );
+            glEnd();
+
+        //TRASEIRA
+         glBegin( GL_POLYGON );
+                glNormal3f(   0.0 ,   0.0 ,  -1.0 );
+                glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( v[10] );
+                glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( v[12] );
+                glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( v[13] );
+                glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( v[11] );
+            glEnd();
+
+        //LADO_DIREITO
+         glBegin( GL_POLYGON );
+                 glNormal3f(   1.0 ,   0.0 ,  0.0 );
+                 glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( v[12] );
+                 glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( v[14] );
+                 glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( v[15] );
+                 glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( v[13] );
+            glEnd();
+
+        //FRENTE_D
+         glBegin( GL_POLYGON );
+                glNormal3f(   0.0 ,   0.0 ,  1.0  );	// Normal da face
+                glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( v[14] );
+                glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( v[16] );
+                glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( v[17] );
+                glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( v[15] );
+            glEnd();
+
+        //LADO_DIREITO
+         glBegin( GL_POLYGON );
+                glNormal3f(   -1.0 ,   0.0 ,  0.0 );
+                glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( v[16] );
+                glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( v[0] );
+                glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( v[3] );
+                glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( v[17] );
+            glEnd();
+     glPopMatrix();
+
+    glPushMatrix();
+     glScalef( 0.4 , 0.4 , 0.4 );
+    glTranslatef(trans_b , -100 , 10);
+
+    glBegin( GL_POLYGON );//FRENTE
+                glNormal3f(   0.0 ,   0.0 ,  1.0  );
+                glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( b[0] );
+                glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( b[1] );
+                glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( b[2] );
+                glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( b[3] );
+            glEnd();
+
+     glBegin( GL_POLYGON );//ESQUERDA
+                glNormal3f(   -1.0 ,   0.0 ,  0.0 );
+                glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( b[1] );
+                glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( b[4] );
+                glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( b[5] );
+                glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( b[2] );
+            glEnd();
+
+     glBegin( GL_POLYGON );//TRASEIRA
+                glNormal3f(   0.0 ,   0.0 ,  -1.0 );
+                glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( b[6] );
+                glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( b[7] );
+                glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( b[5] );
+                glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( b[4] );
+            glEnd();
+
+      glBegin( GL_POLYGON );//DIREITA
+                glNormal3f(   1.0 ,   0.0 ,  0.0 );
+                glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( b[3] );
+                glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( b[7] );
+                glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( b[6] );
+                glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( b[0] );
+            glEnd();
+
+    glBegin( GL_POLYGON );//CIMA
+                glNormal3f(   0.0 ,   0.8 ,  1  );
+                glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( b[6] );
+                glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( b[4] );
+                 glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( b[1] );
+                glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( b[0] );
+            glEnd();
+
+    glBegin( GL_POLYGON );//BAIXO
+                glNormal3f(   0.0 ,   -1.0 ,  0.0 );
+                glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( b[3] );
+                glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( b[2] );
+                glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( b[5] );
+                glTexCoord2f( 1.0 ,  0.0 );glVertex3fv( b[7] );
+            glEnd();
+
+    glPopMatrix();
+
+
+
+
+}
 
 // Hélice
 void desenha_helice(void)
@@ -877,6 +1078,7 @@ void desenha_arCondicionado(void)
 		// 	myVertex3f(TD);
 		// glEnd();
 
+        glBindTexture ( GL_TEXTURE_2D, TEXTURA1 ); // textura corrente
 		desenhaFrente();
 		desenhaAtras();
 		desenhaCima();
@@ -919,6 +1121,16 @@ void desenha_arCondicionado(void)
 
         glPushMatrix();
             gradeLado();
+        glPopMatrix();
+
+        glPushMatrix();
+            glBindTexture ( GL_TEXTURE_2D, TEXTURA2 ); // textura corrente
+            desenha_suporte(-30, -75);
+        glPopMatrix();
+
+        glPushMatrix();
+            glBindTexture ( GL_TEXTURE_2D, TEXTURA2 ); // textura corrente
+            desenha_suporte(30, 75);
         glPopMatrix();
 
 	glPopMatrix();
