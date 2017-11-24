@@ -28,6 +28,8 @@
     #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #elif linux
     #include <GL/glut.h>
+    #include <unistd.h>
+    #define Sleep(x) usleep((x)*1000)
 #else
     #include <gl/glut.h>
 #endif
@@ -53,10 +55,11 @@ using namespace std;
 #define ALT_HELP  240
 
 
-#define NUM_TEX   3
+#define NUM_TEX   4
 #define TEXTURA1  1000
 #define TEXTURA2  1001
 #define TEXTURA3  1002
+#define TEXTURA4  1003
 
 #define NUM_OBJETOS 5
 
@@ -217,31 +220,31 @@ GLint numero_vertices_helice = 8;
 // ************************************************************
 GLfloat v[ 18 ][ 3 ] =
 {
-    { 50 ,  400 , 0 }, //0
-    {  -50 ,  400 , 0} , //1
-    {   -50 , -300 , 0 } , //2
-    {  50 , -300 , 0 },   //3
+    {  50 ,  400 ,   0 },   //0
+    { -50 ,  400 ,   0 },   //1
+    { -50 , -300 ,   0 },   //2
+    {  50 , -300 ,   0 },   //3
 
-    {  -50 , 400 , 40 },//4
-    {  -50 , -300 , 40 },//5
+    { -50 ,  400 ,  40 },   //4
+    { -50 , -300 ,  40 },   //5
 
-    {  50 , 400 , 40 },//6
-    {  50 , -300 , 40 },   //7
+    {  50 ,  400 ,  40 },   //6
+    {  50 , -300 ,  40 },   //7
 
-     {  -70 , 400 , 40 },//8
-    {  -70 , -300 , 40 },//9
+    { -70 ,  400 ,  40 },   //8
+    { -70 , -300 ,  40 },   //9
 
-    { -70, 400, -70}, //10
-     {  -70 , -300 , -70 }, //11
+    { -70 ,  400 , -70 },   //10
+    { -70 , -300 , -70 },   //11
 
-      {  70 , 400 , -70 },//12
-      {    70 , -300 , -70 }, //13
+    {  70 ,  400 , -70 },   //12
+    {  70 , -300 , -70 },   //13
 
-       {  70 , 400 , 40 },//14
-      {    70 , -300 , 40 },//15
+    {  70 ,  400 ,  40 },   //14
+    {  70 , -300 ,  40 },   //15
 
-      { 50 ,  400 , 40 }, //16
-      {  50 , -300 , 40 } , //17
+    {  50 ,  400 ,  40 },   //16
+    {  50 , -300 ,  40 },   //17
 
 
 
@@ -249,16 +252,16 @@ GLfloat v[ 18 ][ 3 ] =
 
 GLfloat b[ 18 ][ 3 ] ={
 
-    { 18 ,  10 , 30 }, //0
-    {  -18 ,  10 , 30} , //1
-    {   -18 , 0 , 30 } , //2
-    {  18 , 0 , 30 },  //3
+    {  18 , 10 ,  30 },     //0
+    { -18 , 10 ,  30 },     //1
+    { -18 ,  0 ,  30 },     //2
+    {  18 ,  0 ,  30 },     //3
 
-    { -18 ,  20 , -90 }, //4
-    { -18 ,  0 , -90} , //5
+    { -18 , 20 , -90 },     //4
+    { -18 ,  0 , -90 },     //5
 
-    { 18 ,  20 , -90 }, //6
-    {  18 , 0 , -90 },  //7
+    {  18 , 20 , -90 },     //6
+    {  18 ,  0 , -90 },     //7
 
 
 };
@@ -292,7 +295,6 @@ int LoadBMP(char* filename)
     if (CTOI(Header[0x1C])!=24)
         SAIR;
 
-    // cout << "ASFASISSF!" << endl;
     // Recupera a informação dos atributos de
     // altura e largura da imagem
     Width   = CTOI(Header[0x12]);
@@ -356,6 +358,10 @@ void Texturizacao() // faz o carregamento
     texture_id[ 2 ] = TEXTURA3;
     glBindTexture ( GL_TEXTURE_2D, texture_id[2] );
     LoadBMP ( "Texturas/inside.bmp" );
+
+    texture_id[ 3 ] = TEXTURA4;
+    glBindTexture ( GL_TEXTURE_2D, texture_id[3] );
+    LoadBMP ( "Texturas/parede.bmp" );
 
     glTexGeni( GL_S , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
     glTexGeni( GL_T , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
@@ -876,7 +882,7 @@ void gradeFrente(){
 void desenhaParede(){
     glPushMatrix();
         glColor3ub( 166 , 56 , 31);
-        glTranslatef(0,0,-30);
+        glTranslatef(0,0,-35);
         glScalef(1, 1, 0.1);
         glutSolidCube(100);
 
