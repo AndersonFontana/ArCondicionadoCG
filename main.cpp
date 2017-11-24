@@ -126,7 +126,7 @@ tipo_janela janela;
 tipo_luz luz[ LUZES ];
 
 bool animar, ligado, dirTrem;
-int passoAux;
+int passoAux, passoDesm;
 
 // especularidade e brilho do material
 GLfloat especularidade[ 4 ];
@@ -869,8 +869,7 @@ void gradeLado(){
     int profundidade = 5;
     float raio = 0.1;
     glPushMatrix();
-        SRT(GRADEL,-48,-33,-14,0,-90,0,0.5);
-    desenha_grade(x,y,linhas,colunas,raio, profundidade);
+        desenha_grade(x,y,linhas,colunas,raio, profundidade);
     glPopMatrix();
 }
 
@@ -882,7 +881,6 @@ void gradeFrente(){
     int profundidade = 2;
     float raio = 0.1;
     glPushMatrix();
-        SRT(GRADEF,-38,-25,16);
         desenha_grade(x,y,linhas,colunas,raio, profundidade);
     glPopMatrix();
 }
@@ -1132,11 +1130,26 @@ void desligaVent(){
         ligado=false;
     }
 }
+void desmonta(){
+    if(passoAux == 200){
+        transf[ GRADEL ].angz -= 0.2;
+        transf[ GRADEL ].dy -= 0.2;
+        transf[ GRADEF ].angx += 0.2;
+        transf[ GRADEF ].dy -= 0.2;
+        teclado(1, 0,0);
+        if(passoDesm<200)
+            passoDesm++;
+        else{
+            transf[ VENTILADOR ].dz += 3;
+        }
+    }
+}
 
 void animacao(){
     if(animar){
         tremeCaixa();
         ligaVent();
+        desmonta();
     }else if(ligado){
         desligaVent();
     }
@@ -1194,12 +1207,12 @@ void desenha_arCondicionado(void)
         glPopMatrix();
 
 		glPushMatrix();
-            SRT(GRADEF);
+            SRT(GRADEF,-38,-25,16);
             gradeFrente();
         glPopMatrix();
 
         glPushMatrix();
-            SRT(GRADEL);
+            SRT(GRADEL,-48,-33,-14,0,-90,0,0.5);
             gradeLado();
         glPopMatrix();
 
@@ -1282,6 +1295,7 @@ void inicializa( void )
     tonalizacao   = 'S';
     passo         = 1;
     passoAux      = 1;
+    passoDesm     = 1;
 
     ambiente[ 0 ] = 0.2;
     ambiente[ 1 ] = 0.2;
