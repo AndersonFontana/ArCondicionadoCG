@@ -102,6 +102,11 @@ struct tipo_luz{
     bool    ligada;
 };
 
+GLfloat angle, fAspect;
+GLfloat rotX, rotY, rotX_ini, rotY_ini;
+GLfloat obsX_ini, obsY_ini, obsZ_ini;
+int x_ini,y_ini,bot;
+
 // define a perspectiva da camera
 tipo_camera camera;
 
@@ -429,8 +434,8 @@ void desenha_help(void)
 
     mostra_texto_bitmap( 0 , 225 , "ESC           : finaliza o programa" );
     mostra_texto_bitmap( 0 , 210 , "F             : alterna tonalizacao entre flat e smooth" );
-    mostra_texto_bitmap( 0 , 195 , "1 a 4         : seleciona um dos 4 vertices do canto" );
-    mostra_texto_bitmap( 0 , 180 , "CTRL NAVEGACAO: o vertice de canto selecionado" );
+    mostra_texto_bitmap( 0 , 195 , "PAGE_UP       : aumenta o tamanho da window" );
+    mostra_texto_bitmap( 0 , 180 , "PAGE_DOWN     : diminui o tamanho da window" );
     mostra_texto_bitmap( 0 , 165 , "ALT +         : aumenta o passo" );
     mostra_texto_bitmap( 0 , 150 , "ALT -         : diminui o passo" );
     mostra_texto_bitmap( 0 , 135 , "I             : reinicializa" );
@@ -441,7 +446,7 @@ void desenha_help(void)
     mostra_texto_bitmap( 0 ,  60 , "a             : diminui o angulo de abertura da perspectiva (zoom-in)" );
     mostra_texto_bitmap( 0 ,  45 , "+ -           : executa a transformacao corrente sobre o eixo corrente" );
     mostra_texto_bitmap( 0 ,  30 , "ALT NAVEGACAO : movimenta a fonte de luz" );
-    mostra_texto_bitmap( 0 ,  15 , "NAVEGACAO     : movimenta a camera" );
+    mostra_texto_bitmap( 0 ,  15 , "MOUSE         : movimenta a camera" );
 
     // Executa os comandos OpenGL
     glutSwapBuffers();
@@ -522,6 +527,20 @@ void define_iluminacao( void )
         glShadeModel( GL_SMOOTH );
 }
 
+// Função usada para especificar a posição do observador virtual
+void PosicionaObservador(void)
+{
+    // Especifica sistema de coordenadas do modelo
+    glMatrixMode(GL_MODELVIEW);
+    // Inicializa sistema de coordenadas do modelo
+    glLoadIdentity();
+    define_iluminacao();
+    // Posiciona e orienta o observador
+    glTranslatef(-camera.posx,-camera.posy,-camera.posz);
+    glRotatef(rotX,1,0,0);
+    glRotatef(rotY,0,1,0);
+}
+
 // Funcao usada para especificar o volume de visualizacao
 void especifica_parametros_visualizacao( void )
 {
@@ -541,7 +560,8 @@ void especifica_parametros_visualizacao( void )
     glLoadIdentity();
 
     // Especifica posicao da camera (o observador) e do alvo
-    gluLookAt( camera.posx , camera.posy , camera.posz , camera.alvox , camera.alvoy , camera.alvoz ,0,1,0);
+    // gluLookAt( camera.posx , camera.posy , camera.posz , camera.alvox , camera.alvoy , camera.alvoz ,0,1,0);
+    PosicionaObservador();
 }
 
 // Funcao callback chamada quando o tamanho da janela eh alterado
@@ -1152,6 +1172,13 @@ void inicializa( void )
         transf[i].angz = 0.0;
     }
 
+    angle=45;
+       
+    // Inicializa as variáveis usadas para alterar a posição do 
+    // observador virtual
+    rotX = 0;
+    rotY = 0;
+
     camera.posx   = 0;
     camera.posy   = 0;
     camera.posz   = 200;
@@ -1187,7 +1214,7 @@ void inicializa( void )
     // posicao
     luz[ 0 ].posicao[ 0 ] =    0.0;
     luz[ 0 ].posicao[ 1 ] =  300.0;
-    luz[ 0 ].posicao[ 2 ] =  300.0;
+    luz[ 0 ].posicao[ 2 ] =  100.0;
     luz[ 0 ].posicao[ 3 ] =    1.0;
 
     luz[ 0 ].ligada = true;
@@ -1234,6 +1261,9 @@ void inicializa( void )
     glutPositionWindow( ( glutGet( GLUT_SCREEN_WIDTH  ) - LAR_MAIN ) / 2 ,
                         ( glutGet( GLUT_SCREEN_HEIGHT ) - ALT_MAIN ) / 2 );
     Texturizacao();
+
+    PosicionaObservador();
+    glutPostRedisplay();
 }
 
 // ************************************************************
@@ -1371,8 +1401,6 @@ void teclado( unsigned char key , GLint x , GLint y )
 // os parametros que recebe sao a tecla pressionada e a posicao x e y
 void teclas_especiais( GLint key , GLint x , GLint y )
 {
-    int l , c;
-
     GLint modificador = glutGetModifiers();
 
     if ( modificador & GLUT_ACTIVE_ALT)
@@ -1396,14 +1424,6 @@ void teclas_especiais( GLint key , GLint x , GLint y )
 
         if ( key == GLUT_KEY_PAGE_DOWN)
             luz[ 0 ].posicao[ 2 ] -= passo*3;
-
-        define_iluminacao();
-    }
-    if ( modificador & GLUT_ACTIVE_CTRL )
-    {
-        // CTRL pressionado
-
-        l = c = 0;
 
         define_iluminacao();
     }
@@ -1452,6 +1472,63 @@ void teclas_especiais( GLint key , GLint x , GLint y )
 }
 
 
+// Função callback para eventos de botões do mouse
+void GerenciaMouse(int button, int state, int x, int y)
+{
+    if(state==GLUT_DOWN)
+    {
+        // Salva os parâmetros atuais
+        x_ini = x;
+        y_ini = y;
+        obsX_ini = camera.posx;
+        obsY_ini = camera.posy;
+        obsZ_ini = camera.posz;
+        rotX_ini = rotX;
+        rotY_ini = rotY;
+        bot = button;
+    }
+    else bot = -1;
+}
+
+// Função callback para eventos de movimento do mouse
+#define SENS_ROT    5.0
+#define SENS_OBS    10.0
+#define SENS_TRANSL 10.0
+void GerenciaMovim(int x, int y)
+{
+    // Botão esquerdo ?
+    if(bot==GLUT_LEFT_BUTTON)
+    {
+        // Calcula diferenças
+        int deltax = x_ini - x;
+        int deltay = y_ini - y;
+        // E modifica ângulos
+        rotY = rotY_ini - deltax/SENS_ROT;
+        rotX = rotX_ini - deltay/SENS_ROT;
+    }
+    // Botão direito ?
+    else if(bot==GLUT_RIGHT_BUTTON)
+    {
+        // Calcula diferença
+        int deltaz = y_ini - y;
+        // E modifica distância do observador
+        camera.posz = obsZ_ini + deltaz/SENS_OBS;
+    }
+    // Botão do meio ?
+    else if(bot==GLUT_MIDDLE_BUTTON)
+    {
+        // Calcula diferenças
+        int deltax = x_ini - x;
+        int deltay = y_ini - y;
+        // E modifica posições
+        camera.posx = obsX_ini + deltax/SENS_TRANSL;
+        camera.posy = obsY_ini - deltay/SENS_TRANSL;
+    }
+    PosicionaObservador();
+    glutPostRedisplay();
+}
+
+
 // ************************************************************
 // MAIN
 // ************************************************************
@@ -1494,6 +1571,12 @@ int main( int argc , char *argv[] )
     glutKeyboardFunc( teclado );
     glutSpecialFunc( teclas_especiais );
     glutReshapeFunc( altera_tamanho_janela );
+
+    // Registra a função callback para eventos de botões do mouse   
+    glutMouseFunc(GerenciaMouse);
+     
+    // Registra a função callback para eventos de movimento do mouse    
+    glutMotionFunc(GerenciaMovim);
 
     // funcao que tem as inicializacoes de variaveis e estados do OpenGL
     inicializa();
