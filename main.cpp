@@ -365,6 +365,7 @@ void Texturizacao() // faz o carregamento
 
     glTexGeni( GL_S , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
     glTexGeni( GL_T , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
+    glDisable(GL_TEXTURE_2D);
 }
 
 // Funcao para mostrar texto
@@ -598,12 +599,13 @@ void altera_tamanho_janela( GLsizei largura , GLsizei altura )
 // ************************************************************
 //Suporte
 void desenha_suporte(int trans_v, int trans_b ){
-GLUquadricObj *sup; // um objeto é criado
-sup = gluNewQuadric();
+    GLUquadricObj *sup; // um objeto é criado
+    sup = gluNewQuadric();
 
 
-glPushMatrix();
-glTranslatef(trans_v , -10 , -25);
+    glPushMatrix();
+    glTranslatef(trans_v , -10 , -25);
+    glEnable(GL_TEXTURE_2D);
         glScalef( 0.1 , 0.1 , 0.1 );
         glColor3ub( 155 , 155 , 155);
 
@@ -742,6 +744,7 @@ glTranslatef(trans_v , -10 , -25);
             glEnd();
 
     glPopMatrix();
+    glDisable(GL_TEXTURE_2D);
 
 
 
@@ -1091,21 +1094,6 @@ void desenhaIndicador(){
     glutSolidSphere(1,10,10);
 }
 
-void desenhaFundoVentilador(){
-    GLUquadricObj *qobj;
-	qobj = gluNewQuadric();
-
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL );
-	gluQuadricDrawStyle( qobj,  GLU_FILL );
-
-	glPushMatrix();
-        glColor3ub(0,0,0);
-        glTranslatef(-15,0,0);
-        gluDisk(qobj, 0,20,30,30);
-    glPopMatrix();
-    gluDeleteQuadric(qobj);
-}
-
 void tremeCaixa(){
     if(dirTrem)
         transf[ 1 ].dx -= 0.5;
@@ -1189,10 +1177,6 @@ void desenha_arCondicionado(void)
 
         glPushMatrix();
             desenhaIndicador();
-        glPopMatrix();
-
-        glPushMatrix();
-            desenhaFundoVentilador();
         glPopMatrix();
 
         glPushMatrix();
