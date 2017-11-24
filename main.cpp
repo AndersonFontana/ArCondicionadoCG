@@ -55,6 +55,7 @@ using namespace std;
 #define NUM_TEX   1
 #define TEXTURA1  1000
 #define TEXTURA2  1001
+
 #define NUM_OBJETOS 5
 
 #define CENA 0
@@ -112,6 +113,9 @@ tipo_janela janela;
 
 // definicao de uma fonte de luz
 tipo_luz luz[ LUZES ];
+
+bool animar, ligado, dirTrem;
+int passoAux;
 
 // especularidade e brilho do material
 GLfloat especularidade[ 4 ];
@@ -251,6 +255,8 @@ GLfloat b[ 18 ][ 3 ] ={
 
 
 };
+//declaracao da funcao para utilizar durante animacao
+void teclado( unsigned char key , GLint x , GLint y );
 
 // ************************************************************
 // FUNÇÕES GERAIS
@@ -422,18 +428,16 @@ void desenha_help(void)
     glClear( GL_COLOR_BUFFER_BIT );
     glColor4f( 1.0 , 1.0 , 0.0 , 1.0 );
 
-    mostra_texto_bitmap( 0 , 225 , "ESC           : finaliza o programa" );
-    mostra_texto_bitmap( 0 , 210 , "F             : alterna tonalizacao entre flat e smooth" );
-    mostra_texto_bitmap( 0 , 195 , "1 a 4         : seleciona um dos 4 vertices do canto" );
-    mostra_texto_bitmap( 0 , 180 , "CTRL NAVEGACAO: o vertice de canto selecionado" );
-    mostra_texto_bitmap( 0 , 165 , "ALT +         : aumenta o passo" );
-    mostra_texto_bitmap( 0 , 150 , "ALT -         : diminui o passo" );
+    mostra_texto_bitmap( 0 , 195 , "ESC           : finaliza o programa" );
+    mostra_texto_bitmap( 0 , 180 , "F             : alterna tonalizacao entre flat e smooth" );
+    mostra_texto_bitmap( 0 , 165 , "0 a 4         : seleciona um objeto" );
+    mostra_texto_bitmap( 0 , 150 , "A             : ligar/desligar" );
     mostra_texto_bitmap( 0 , 135 , "I             : reinicializa" );
     mostra_texto_bitmap( 0 , 120 , "L             : liga/desliga luz" );
     mostra_texto_bitmap( 0 , 105 , "X Y Z         : seleciona o eixo" );
     mostra_texto_bitmap( 0 ,  90 , "S R T         : seleciona a transformacao" );
-    mostra_texto_bitmap( 0 ,  75 , "A             : aumenta o angulo de abertura da perspectiva (zoom-out)" );
-    mostra_texto_bitmap( 0 ,  60 , "a             : diminui o angulo de abertura da perspectiva (zoom-in)" );
+    mostra_texto_bitmap( 0 ,  75 , "C             : aumenta o angulo de abertura da perspectiva (zoom-out)" );
+    mostra_texto_bitmap( 0 ,  60 , "c             : diminui o angulo de abertura da perspectiva (zoom-in)" );
     mostra_texto_bitmap( 0 ,  45 , "+ -           : executa a transformacao corrente sobre o eixo corrente" );
     mostra_texto_bitmap( 0 ,  30 , "ALT NAVEGACAO : movimenta a fonte de luz" );
     mostra_texto_bitmap( 0 ,  15 , "NAVEGACAO     : movimenta a camera" );
@@ -569,6 +573,7 @@ sup = gluNewQuadric();
 glPushMatrix();
 glTranslatef(trans_v , -10 , -25);
         glScalef( 0.1 , 0.1 , 0.1 );
+        glColor3ub( 155 , 155 , 155);
 
         //FRENTE
             glBegin( GL_POLYGON );
@@ -718,10 +723,9 @@ void desenha_helice(void)
     gluQuadricTexture(quadObj, GL_TRUE);
     gluQuadricDrawStyle(quadObj, GLU_FILL);
 
-    glColor4f( 1.0 , 1.0 , 0.0 , 1.0 );
+    glColor3ub( 120 , 120 , 120);
 
     glScalef(0.14, 0.14, 0.14);
-    glTranslatef(-100, 0, 0);
 
     glPushMatrix(); // CENA
 
@@ -759,6 +763,7 @@ void desenha_helice(void)
         glPopMatrix();
 
     glPopMatrix();
+    gluDeleteQuadric(quadObj);
 }
 /*Cria uma grade. (0,0) é o ponto inferior esquerdo da grade, (x, y) é o ponto superior direito
 quantidade total de linhas que a grade tem e quantidade total de colunas(ambos incluindo bordas),
@@ -842,6 +847,15 @@ void gradeFrente(){
     glPopMatrix();
 }
 
+void desenhaParede(){
+    glPushMatrix();
+        glColor3ub( 166 , 56 , 31);
+        glTranslatef(0,0,-30);
+        glScalef(1, 1, 0.1);
+        glutSolidCube(100);
+
+    glPopMatrix();
+}
 
 void drawSimpleCircle(point pnt, int raio, float prof, int segmentos)
 {
@@ -1005,19 +1019,10 @@ void desenhaLadoDireito()
 }
 
 void desenhaEsferaCanto(point pnt, float offsetZ, int cortes) {
-	// GLUquadricObj *qobj;
-	// qobj = gluNewQuadric();
-
-	// glPolygonMode(GL_FRONT_AND_BACK, GL_FILL );
-	// gluQuadricDrawStyle( qobj,  GLU_FILL );
-
 	glPushMatrix();
 		glTranslatef( pnt.x , pnt.y , pnt.z+offsetZ );
-		// gluSphere( qobj, RC, cortes, cortes );
 		glutSolidSphere(RC, cortes, cortes );
 	glPopMatrix();
-
-	// gluDeleteQuadric( qobj );
 }
 
 void desenhaCilindroLado(float x, float y, float z, float h, char rot, int cortes) {
@@ -1041,43 +1046,68 @@ void desenhaCilindroLado(float x, float y, float z, float h, char rot, int corte
 	gluDeleteQuadric( qobj );
 }
 
-void desenha_arCondicionado(void)
-{
+void desenhaIndicador(){
+    if(animar)
+        glColor3ub(0,255,0);
+    else
+        glColor3ub(255,0,0);
+    glTranslated(-35,-27,15);
+    glutSolidSphere(1,10,10);
+}
+
+void desenhaFundoVentilador(){
+    GLUquadricObj *qobj;
+	qobj = gluNewQuadric();
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL );
+	gluQuadricDrawStyle( qobj,  GLU_FILL );
+
 	glPushMatrix();
+        glColor3ub(0,0,0);
+        glTranslatef(-15,0,0);
+        gluDisk(qobj, 0,20,30,30);
+    glPopMatrix();
+    gluDeleteQuadric(qobj);
+}
 
-		// glBegin( GL_POINTS );
-		// 	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		// 	myVertex3f(FA);
-		// 	myVertex3f(FB);
-		// 	myVertex3f(FC);
-		// 	myVertex3f(FD);
-		// 	myVertex3f(CH);
-		// 	myVertex3f(HA);
-		// 	myVertex3f(HB);
-		// 	myVertex3f(HC);
-		// 	myVertex3f(HD);
-		// 	myVertex3f(CA);
-		// 	myVertex3f(CB);
-		// 	myVertex3f(CD);
-		// 	myVertex3f(CC);
-		// 	myVertex3f(LDA);
-		// 	myVertex3f(LDB);
-		// 	myVertex3f(LDC);
-		// 	myVertex3f(LDD);
-		// 	myVertex3f(BA);
-		// 	myVertex3f(BB);
-		// 	myVertex3f(BC);
-		// 	myVertex3f(BD);
-		// 	myVertex3f(LEA);
-		// 	myVertex3f(LEB);
-		// 	myVertex3f(LEC);
-		// 	myVertex3f(LED);
-		// 	myVertex3f(TA);
-		// 	myVertex3f(TB);
-		// 	myVertex3f(TC);
-		// 	myVertex3f(TD);
-		// glEnd();
+void tremeCaixa(){
+    if(dirTrem)
+        transf[ 1 ].dx -= 0.5;
+    else
+        transf[ 1 ].dx += 0.5;
+    dirTrem = !dirTrem;
+    teclado(1, 0,0);
+}
 
+void ligaVent(){
+    if(passoAux<200){
+        passoAux++;
+    }
+    transf[ 2 ].angz -= passoAux;
+    teclado(1, 0,0);
+    Sleep(15);
+}
+
+void desligaVent(){
+    transf[ 2 ].angz -= passoAux;
+    teclado(1, 0,0);
+    Sleep(20);
+    if(passoAux>1){
+        passoAux--;
+    }else{
+        ligado=false;
+    }
+}
+
+void animacao(){
+    if(animar){
+        tremeCaixa();
+        ligaVent();
+    }else if(ligado){
+        desligaVent();
+    }
+}
+void desenhaCaixa(){
         glBindTexture ( GL_TEXTURE_2D, TEXTURA1 ); // textura corrente
 		desenhaFrente();
 		desenhaAtras();
@@ -1085,6 +1115,7 @@ void desenha_arCondicionado(void)
 		desenhaBaixo();
 		desenhaLadoEsquerdo();
 		desenhaLadoDireito();
+
 
 		desenhaEsferaCanto(FA, -RC, 20);
 		desenhaEsferaCanto(FB, -RC, 20);
@@ -1111,29 +1142,41 @@ void desenha_arCondicionado(void)
 		desenhaCilindroLado(FC.x, FC.y, FC.z-RC, arProfundidade-RC, '.', 20);
 		desenhaCilindroLado(FD.x, FD.y, FD.z-RC, arProfundidade-RC, '.', 20);
 
+}
+
+void desenha_arCondicionado(void)
+{
+	glPushMatrix();
+
+        SRT(CAIXA,0,-2);
+        desenhaCaixa();
+
         glPushMatrix();
+            desenhaIndicador();
+        glPopMatrix();
+
+        glPushMatrix();
+            desenhaFundoVentilador();
+        glPopMatrix();
+
+        glPushMatrix();
+            SRT(VENTILADOR, -15);
             desenha_helice();
 		glPopMatrix();
 
 		glPushMatrix();
+            SRT(GRADEF);
             gradeFrente();
         glPopMatrix();
 
         glPushMatrix();
+            SRT(GRADEL);
             gradeLado();
         glPopMatrix();
 
-        glPushMatrix();
-            glBindTexture ( GL_TEXTURE_2D, TEXTURA2 ); // textura corrente
-            desenha_suporte(-30, -75);
-        glPopMatrix();
-
-        glPushMatrix();
-            glBindTexture ( GL_TEXTURE_2D, TEXTURA2 ); // textura corrente
-            desenha_suporte(30, 75);
-        glPopMatrix();
-
 	glPopMatrix();
+
+	animacao();
 }
 
 // Funcao responsavel por desenhar os objetos
@@ -1145,17 +1188,20 @@ void desenha(void)
     // Seleciona o tipo de matriz para a visualizacao dos objetos (modelos)
     glMatrixMode(GL_MODELVIEW);
 
-    /*glTranslatef( transf.dx , transf.dy , transf.dz );
-    glRotatef( transf.angx , 1 , 0 , 0 );
-    glRotatef( transf.angy , 0 , 1 , 0 );
-    glRotatef( transf.angz , 0 , 0 , 1 );
-    glScalef( transf.sx , transf.sy , transf.sz );*/
     SRT(CENA);
+    desenhaParede();
+    glPushMatrix();
+        glBindTexture ( GL_TEXTURE_2D, TEXTURA2 ); // textura corrente
+        desenha_suporte(-30, -75);
+    glPopMatrix();
 
-    // glPushMatrix();
-    desenha_arCondicionado();
-    //     desenha_helice();
-    // glPopMatrix();
+    glPushMatrix();
+        glBindTexture ( GL_TEXTURE_2D, TEXTURA2 ); // textura corrente
+        desenha_suporte(30, 75);
+    glPopMatrix();
+    glPushMatrix();
+        desenha_arCondicionado();
+    glPopMatrix();
 
     // Executa os comandos OpenGL
     glutSwapBuffers();
@@ -1197,7 +1243,8 @@ void inicializa( void )
     transformacao = 'T';
     eixo          = 'X';
     tonalizacao   = 'S';
-    passo         = 5;
+    passo         = 1;
+    passoAux      = 1;
 
     ambiente[ 0 ] = 0.2;
     ambiente[ 1 ] = 0.2;
@@ -1230,6 +1277,11 @@ void inicializa( void )
     especularidade[ 2 ] = 0.6;
     especularidade[ 3 ] = 1.0;
     espec_material = 50;
+
+    animar = false;
+    ligado = false;
+    dirTrem = true;
+
 
 
     // habilita a transparenica
@@ -1275,119 +1327,113 @@ void inicializa( void )
 // Funcao de tratamento do teclado
 void teclado( unsigned char key , GLint x , GLint y )
 {
-    GLint modificador = glutGetModifiers();
 
-    if ( modificador & GLUT_ACTIVE_ALT)
-    {
-        // ALT pressionado
-        if( key == '-' || key == '_' )
-            if( passo - 1 > 0 )
-                passo--;
+    if ( key == 27 && !animar )
+        exit( 0 );
 
-        if( key == '+' || key == '=' )
-            passo++;
+    if ( key >= '0' && key <= '4' )
+        objeto = key - 48;
+
+    if ( toupper(key) == 'A'){
+        animar=!animar;
+        if(animar){
+            ligado = true;
+            passoAux = 1;
+        }
     }
-    else
+
+    if ( toupper( key ) == 'L' )
     {
-        if ( key == 27 )
-            exit( 0 );
+        luz[ 0 ].ligada = !luz[ 0 ].ligada;
+        if ( luz[ 0 ].ligada )
+            glEnable( GL_LIGHT0 );
+        else
+            glDisable( GL_LIGHT0 );
+    }
 
-        if ( key >= '1' && key <= '4' )
-            objeto = key - 48;
+    if ( toupper( key ) == 'F')
+    {
+        if ( tonalizacao == 'F' )
+            tonalizacao = 'S';
+        else
+            tonalizacao = 'F';
+        define_iluminacao();
+    }
 
-        if ( toupper( key ) == 'L' )
-        {
-            luz[ 0 ].ligada = !luz[ 0 ].ligada;
-            if ( luz[ 0 ].ligada )
-                glEnable( GL_LIGHT0 );
-            else
-                glDisable( GL_LIGHT0 );
+    if ( toupper( key ) == 'I' )
+        inicializa();
+
+    if ( toupper( key ) == 'X' || toupper( key ) == 'Y' || toupper( key ) == 'Z')
+        eixo = toupper( key );
+
+    if ( toupper( key ) == 'S' || toupper( key ) == 'R' || toupper( key ) == 'T' )
+        transformacao = toupper( key );
+
+    if ( key == 'C')
+        if ( camera.ang+passo < 180 )
+            camera.ang += passo;
+
+    if ( key == 'c')
+        if ( camera.ang-passo > 0 )
+            camera.ang -= passo;
+
+    if ( key == '-' || key == '_' ){
+        switch( transformacao ){
+            case 'S':
+                if ( eixo == 'X')
+                    transf[ objeto ].sx -= 0.1;
+                if ( eixo == 'Y')
+                    transf[ objeto ].sy -= 0.1;
+                if ( eixo == 'Z')
+                    transf[ objeto ].sz -= 0.1;
+                break;
+
+            case 'R':
+                if ( eixo == 'X')
+                    transf[ objeto ].angx -= passo;
+                if ( eixo == 'Y')
+                    transf[ objeto ].angy -= passo;
+                if ( eixo == 'Z')
+                    transf[ objeto ].angz -= passo;
+                break;
+
+            case 'T':
+                if ( eixo == 'X')
+                    transf[ objeto ].dx -= passo;
+                if ( eixo == 'Y')
+                    transf[ objeto ].dy -= passo;
+                if ( eixo == 'Z')
+                    transf[ objeto ].dz -= passo;
+                break;
         }
+    }else if ( key == '+' || key == '=' ){
+        switch( transformacao ){
+            case 'S':
+                if ( eixo == 'X')
+                    transf[ objeto ].sx += 0.1;
+                if ( eixo == 'Y')
+                    transf[ objeto ].sy += 0.1;
+                if ( eixo == 'Z')
+                    transf[ objeto ].sz += 0.1;
+                break;
 
-        if ( toupper( key ) == 'F')
-        {
-            if ( tonalizacao == 'F' )
-                tonalizacao = 'S';
-            else
-                tonalizacao = 'F';
-            define_iluminacao();
-        }
+            case 'R':
+                if ( eixo == 'X')
+                    transf[ objeto ].angx += passo;
+                if ( eixo == 'Y')
+                    transf[ objeto ].angy += passo;
+                if ( eixo == 'Z')
+                    transf[ objeto ].angz += passo;
+                break;
 
-        if ( toupper( key ) == 'I' )
-            inicializa();
-
-        if ( toupper( key ) == 'X' || toupper( key ) == 'Y' || toupper( key ) == 'Z')
-            eixo = toupper( key );
-
-        if ( toupper( key ) == 'S' || toupper( key ) == 'R' || toupper( key ) == 'T' )
-            transformacao = toupper( key );
-
-        if ( key == 'A')
-            if ( camera.ang+passo < 180 )
-                camera.ang += passo;
-
-        if ( key == 'a')
-            if ( camera.ang-passo > 0 )
-                camera.ang -= passo;
-
-        if ( key == '-' || key == '_' ){
-            switch( transformacao ){
-                case 'S':
-                    if ( eixo == 'X')
-                        transf[ objeto ].sx -= 0.1;
-                    if ( eixo == 'Y')
-                        transf[ objeto ].sy -= 0.1;
-                    if ( eixo == 'Z')
-                        transf[ objeto ].sz -= 0.1;
-                    break;
-
-                case 'R':
-                    if ( eixo == 'X')
-                        transf[ objeto ].angx -= passo;
-                    if ( eixo == 'Y')
-                        transf[ objeto ].angy -= passo;
-                    if ( eixo == 'Z')
-                        transf[ objeto ].angz -= passo;
-                    break;
-
-                case 'T':
-                    if ( eixo == 'X')
-                        transf[ objeto ].dx -= passo;
-                    if ( eixo == 'Y')
-                        transf[ objeto ].dy -= passo;
-                    if ( eixo == 'Z')
-                        transf[ objeto ].dz -= passo;
-                    break;
-            }
-        }else if ( key == '+' || key == '=' ){
-            switch( transformacao ){
-                case 'S':
-                    if ( eixo == 'X')
-                        transf[ objeto ].sx += 0.1;
-                    if ( eixo == 'Y')
-                        transf[ objeto ].sy += 0.1;
-                    if ( eixo == 'Z')
-                        transf[ objeto ].sz += 0.1;
-                    break;
-
-                case 'R':
-                    if ( eixo == 'X')
-                        transf[ objeto ].angx += passo;
-                    if ( eixo == 'Y')
-                        transf[ objeto ].angy += passo;
-                    if ( eixo == 'Z')
-                        transf[ objeto ].angz += passo;
-                    break;
-
-                case 'T':
-                    if ( eixo == 'X')
-                        transf[ objeto ].dx += passo;
-                    if ( eixo == 'Y')
-                        transf[ objeto ].dy += passo;
-                    if ( eixo == 'Z')
-                        transf[ objeto ].dz += passo;
-            break;
-            }
+            case 'T':
+                if ( eixo == 'X')
+                    transf[ objeto ].dx += passo;
+                if ( eixo == 'Y')
+                    transf[ objeto ].dy += passo;
+                if ( eixo == 'Z')
+                    transf[ objeto ].dz += passo;
+        break;
         }
     }
     especifica_parametros_visualizacao();
@@ -1410,6 +1456,12 @@ void teclas_especiais( GLint key , GLint x , GLint y )
     if ( modificador & GLUT_ACTIVE_ALT)
     {
         // ALT pressionado
+        if( key == '-' || key == '_' )
+            if( passo - 1 > 0 )
+                passo--;
+
+        if( key == '+' || key == '=' )
+            passo++;
 
         if ( key == GLUT_KEY_LEFT )
             luz[ 0 ].posicao[ 0 ] -= passo*3;
