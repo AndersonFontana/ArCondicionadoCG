@@ -22,14 +22,14 @@
 #include <sstream>
 
 #if __APPLE__
-	#include <OpenGL/gl.h>
-	#include <OpenGL/glu.h>
-	#include <GLUT/glut.h>
-	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    #include <OpenGL/gl.h>
+    #include <OpenGL/glu.h>
+    #include <GLUT/glut.h>
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #elif linux
-	#include <GL/glut.h>
+    #include <GL/glut.h>
 #else
-	#include <gl/glut.h>
+    #include <gl/glut.h>
 #endif
 
 using namespace std;
@@ -52,9 +52,11 @@ using namespace std;
 #define LAR_HELP  600
 #define ALT_HELP  240
 
-#define NUM_TEX   1
+
+#define NUM_TEX   3
 #define TEXTURA1  1000
 #define TEXTURA2  1001
+#define TEXTURA3  1002
 
 #define NUM_OBJETOS 5
 
@@ -102,6 +104,11 @@ struct tipo_luz{
     bool    ligada;
 };
 
+GLfloat angle, fAspect;
+GLfloat rotX, rotY, rotX_ini, rotY_ini;
+GLfloat obsX_ini, obsY_ini, obsZ_ini;
+int x_ini,y_ini,bot;
+
 // define a perspectiva da camera
 tipo_camera camera;
 
@@ -136,7 +143,7 @@ GLint jan[ JANELAS ], passo, objeto;
 
 struct point
 {
-	float x, y, z;
+    float x, y, z;
 };
 
 int arLargura = 86;
@@ -144,19 +151,19 @@ int arAltura = 60;
 int arProfundidade = 30;
 int diametroHelice = 40;
 
-int RH = diametroHelice/2;		// Raio da hélice
-point FA = {-(arLargura/2), arAltura/2, arProfundidade/2};	// Canto Superior Esquerdo
-point FB = {FA.x+arLargura, FA.y, FA.z};					// Canto Superior Direito
-point FC = {FA.x+arLargura, FA.y-arAltura, FA.z};			// Canto Inferior Direito
-point FD = {FA.x, FA.y-arAltura, FA.z};						// Canto Inferior Esquerdo
+int RH = diametroHelice/2;      // Raio da hélice
+point FA = {-(arLargura/2), arAltura/2, arProfundidade/2};  // Canto Superior Esquerdo
+point FB = {FA.x+arLargura, FA.y, FA.z};                    // Canto Superior Direito
+point FC = {FA.x+arLargura, FA.y-arAltura, FA.z};           // Canto Inferior Direito
+point FD = {FA.x, FA.y-arAltura, FA.z};                     // Canto Inferior Esquerdo
 
-point CH = {FA.x+(arLargura/3), FA.y-(arAltura/2), FA.z};	// Centro da Hélice
-point HA = {CH.x-RH, CH.y+RH, CH.z};						// Canto Superior Esquerdo da Hélice
-point HB = {CH.x+RH, CH.y+RH, CH.z};						// Canto Superior Direito da Hélice
-point HC = {CH.x+RH, CH.y-RH, CH.z};						// Canto Inferior Direito da Hélice
-point HD = {CH.x-RH, CH.y-RH, CH.z};						// Canto Inferior Esquerdo da Hélice
+point CH = {FA.x+(arLargura/3), FA.y-(arAltura/2), FA.z};   // Centro da Hélice
+point HA = {CH.x-RH, CH.y+RH, CH.z};                        // Canto Superior Esquerdo da Hélice
+point HB = {CH.x+RH, CH.y+RH, CH.z};                        // Canto Superior Direito da Hélice
+point HC = {CH.x+RH, CH.y-RH, CH.z};                        // Canto Inferior Direito da Hélice
+point HD = {CH.x-RH, CH.y-RH, CH.z};                        // Canto Inferior Esquerdo da Hélice
 
-float RC = 2;		// Raio dos Cantos
+float RC = 2;       // Raio dos Cantos
 // Pontos de Cima
 point CA = {FA.x, FA.y+RC, FA.z-arProfundidade};
 point CB = {FB.x, FB.y+RC, FB.z-arProfundidade};
@@ -342,9 +349,13 @@ void Texturizacao() // faz o carregamento
     glBindTexture ( GL_TEXTURE_2D, texture_id[0] );//armazena na posição 0 do vetor
     LoadBMP ( "Texturas/logo.bmp" ); // lê a textura
 
-     texture_id[ 1 ] = TEXTURA2;
-     glBindTexture ( GL_TEXTURE_2D, texture_id[1] );
-     LoadBMP ( "Texturas/textura1.bmp" );
+    texture_id[ 1 ] = TEXTURA2;
+    glBindTexture ( GL_TEXTURE_2D, texture_id[1] );
+    LoadBMP ( "Texturas/textura1.bmp" );
+
+    texture_id[ 2 ] = TEXTURA3;
+    glBindTexture ( GL_TEXTURE_2D, texture_id[2] );
+    LoadBMP ( "Texturas/inside.bmp" );
 
     glTexGeni( GL_S , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
     glTexGeni( GL_T , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
@@ -440,7 +451,7 @@ void desenha_help(void)
     mostra_texto_bitmap( 0 ,  60 , "c             : diminui o angulo de abertura da perspectiva (zoom-in)" );
     mostra_texto_bitmap( 0 ,  45 , "+ -           : executa a transformacao corrente sobre o eixo corrente" );
     mostra_texto_bitmap( 0 ,  30 , "ALT NAVEGACAO : movimenta a fonte de luz" );
-    mostra_texto_bitmap( 0 ,  15 , "NAVEGACAO     : movimenta a camera" );
+    mostra_texto_bitmap( 0 ,  15 , "MOUSE         : movimenta a camera" );
 
     // Executa os comandos OpenGL
     glutSwapBuffers();
@@ -521,6 +532,20 @@ void define_iluminacao( void )
         glShadeModel( GL_SMOOTH );
 }
 
+// Função usada para especificar a posição do observador virtual
+void PosicionaObservador(void)
+{
+    // Especifica sistema de coordenadas do modelo
+    glMatrixMode(GL_MODELVIEW);
+    // Inicializa sistema de coordenadas do modelo
+    glLoadIdentity();
+    define_iluminacao();
+    // Posiciona e orienta o observador
+    glTranslatef(-camera.posx,-camera.posy,-camera.posz);
+    glRotatef(rotX,1,0,0);
+    glRotatef(rotY,0,1,0);
+}
+
 // Funcao usada para especificar o volume de visualizacao
 void especifica_parametros_visualizacao( void )
 {
@@ -540,7 +565,8 @@ void especifica_parametros_visualizacao( void )
     glLoadIdentity();
 
     // Especifica posicao da camera (o observador) e do alvo
-    gluLookAt( camera.posx , camera.posy , camera.posz , camera.alvox , camera.alvoy , camera.alvoz ,0,1,0);
+    // gluLookAt( camera.posx , camera.posy , camera.posz , camera.alvox , camera.alvoy , camera.alvoz ,0,1,0);
+    PosicionaObservador();
 }
 
 // Funcao callback chamada quando o tamanho da janela eh alterado
@@ -738,7 +764,7 @@ void desenha_helice(void)
             glBegin(GL_POLYGON);
                 int radius = 20;
                 for(double i = 0; i < 2 * PI; i += PI / 50)
- 					glVertex3f(cos(i) * radius, sin(i) * radius, 0.0);
+                    glVertex3f(cos(i) * radius, sin(i) * radius, 0.0);
             glEnd();
 
             glPushMatrix(); // HÉLICES
@@ -857,96 +883,99 @@ void desenhaParede(){
     glPopMatrix();
 }
 
-void drawSimpleCircle(point pnt, int raio, float prof, int segmentos)
+void drawInside(point pnt, int raio, float prof, int segmentos)
 {
-	point at;
-	float ang;
-	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
-		ang =  2 * PI * i / segmentos;
-		at.x = raio * cos( ang );
-		at.y = raio * sin( ang );
-		glVertex3f( pnt.x + at.x , pnt.y + at.y , pnt.z - prof);
-	}
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture ( GL_TEXTURE_2D, TEXTURA3 );
+    glBegin( GL_QUADS );
+        glNormal3f(   0.0 ,   0.0 ,  1.0 ); // Normal da face
+        glTexCoord2f( 0 , 1 ); glVertex3f( HA.x, HA.y, HA.z-prof); //( -w ,  h , d );
+        glTexCoord2f( 1 , 1 ); glVertex3f( HB.x, HB.y, HB.z-prof); //(  w ,  h , d );
+        glTexCoord2f( 1 , 0 ); glVertex3f( HC.x, HC.y, HC.z-prof); //(  w , -h , d );
+        glTexCoord2f( 0 , 0 ); glVertex3f( HD.x, HD.y, HD.z-prof); //( -w , -h , d );
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
 }
 
 void drawMainCircle( float prof, int segmentos)
 {
-	float ang;
-	point at, ant, hp;	// Atual, Anterior, helice point
+    float ang;
+    point at, ant, hp;  // Atual, Anterior, helice point
 
     glNormal3f( 0.0 , 0.0 , 1.0 );
-	glBegin( GL_TRIANGLE_STRIP );
-	glColor4f(0.7, 0.7, 0.7, 1.0);
-	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
-		ang =  2 * PI * i / segmentos;
-		at.x = RH * cos( ang );
-		at.y = RH * sin( ang );
-		glVertex3f( CH.x + at.x , CH.y + at.y , CH.z - prof);
-		glVertex3f( CH.x + at.x , CH.y + at.y , CH.z);
-	}
-	glEnd();
+    glBegin( GL_TRIANGLE_STRIP );
+    glColor4f(0.7, 0.7, 0.7, 1.0);
+    for ( GLint i = 0 ; i <= segmentos ; i ++ ){
+        ang =  2 * PI * i / segmentos;
+        at.x = RH * cos( ang );
+        at.y = RH * sin( ang );
+        glVertex3f( CH.x + at.x , CH.y + at.y , CH.z - prof);
+        glVertex3f( CH.x + at.x , CH.y + at.y , CH.z);
+    }
+    glEnd();
 
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
-		ang =  2 * PI * i / segmentos;
-		at.x = RH * cos( ang );
-		at.y = RH * sin( ang );
+    glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+    for ( GLint i = 0 ; i <= segmentos ; i ++ ){
+        ang =  2 * PI * i / segmentos;
+        at.x = RH * cos( ang );
+        at.y = RH * sin( ang );
 
-		if (i==0) {ant = at; continue;}
+        if (i==0) {ant = at; continue;}
 
-		if (CH.y + at.y >= CH.y)		// Superior
-			if (CH.x + at.x <= CH.x)			// Esquerdo
-				hp = HA;
-			else 								// Direito
-				hp = HB;
-		else 							// Inferior
-			if (CH.x + at.x <= CH.x)			// Esquerdo
-				hp = HD;
-			else 								// Direito
-				hp = HC;
-		glNormal3f( 0.0 , 0.0 , 1.0 );
-		glBegin( GL_TRIANGLES );
-			glVertex3f( CH.x + ant.x , CH.y + ant.y , CH.z);
-			glVertex3f( hp.x , hp.y , hp.z);
-			glVertex3f( CH.x + at.x , CH.y + at.y , CH.z);
-		glEnd();
+        if (CH.y + at.y >= CH.y)        // Superior
+            if (CH.x + at.x <= CH.x)            // Esquerdo
+                hp = HA;
+            else                                // Direito
+                hp = HB;
+        else                            // Inferior
+            if (CH.x + at.x <= CH.x)            // Esquerdo
+                hp = HD;
+            else                                // Direito
+                hp = HC;
+        glNormal3f( 0.0 , 0.0 , 1.0 );
+        glBegin( GL_TRIANGLES );
+            glVertex3f( CH.x + ant.x , CH.y + ant.y , CH.z);
+            glVertex3f( hp.x , hp.y , hp.z);
+            glVertex3f( CH.x + at.x , CH.y + at.y , CH.z);
+        glEnd();
 
-		ant = at;
-	}
-    glNormal3f( 0.0 , 0.0 , 0.0 );
-	glBegin( GL_TRIANGLE_FAN );
-		glColor4f(0.5, 0.5, 0.5, 0.5);
-		drawSimpleCircle(CH, RH, prof, segmentos);
-	glEnd();
+        ant = at;
+    }
+
+    glPushMatrix();
+        glColor4f(0.8, 0.8, 0.8, 1.0);
+        drawInside(CH, RH, prof, segmentos);
+    glPopMatrix();
 }
 
 void myVertex3f(point pnt)
 {
-	glVertex3f(pnt.x,   pnt.y,  pnt.z);
+    glVertex3f(pnt.x,   pnt.y,  pnt.z);
 }
 
 void desenhaFrente()
 {
-	drawMainCircle( 20, 200 );
+    drawMainCircle( 20, 200 );
 
     glNormal3f( 0.0 , 0.0 , 1.0 );
-	glBegin( GL_TRIANGLE_STRIP );
+    glBegin( GL_TRIANGLE_STRIP );
         glColor3f(1.0f, 1.0f, 1.0f);
-		myVertex3f(HB);
-		myVertex3f(FA);
-		myVertex3f(HA);
-		myVertex3f(FD);
-		myVertex3f(HD);
-		myVertex3f(FC);
-		myVertex3f(HC);
-		myVertex3f(FB);
-		myVertex3f(HB);
-		myVertex3f(FA);
-	glEnd();
+        myVertex3f(HB);
+        myVertex3f(FA);
+        myVertex3f(HA);
+        myVertex3f(FD);
+        myVertex3f(HD);
+        myVertex3f(FC);
+        myVertex3f(HC);
+        myVertex3f(FB);
+        myVertex3f(HB);
+        myVertex3f(FA);
+    glEnd();
 
+    glEnable(GL_TEXTURE_2D);
     glBindTexture ( GL_TEXTURE_2D, TEXTURA1 );
-        glColor3f(0.8f, 0.8f, 0.8f);
-        glBegin( GL_QUADS );
+    glColor3f(1.0, 1.0, 1.0);
+    glBegin( GL_QUADS );
 
         // Face frontal
         int padding = 5;
@@ -956,18 +985,19 @@ void desenhaFrente()
         glTexCoord2f( 1 , 1 ); glVertex3f( FB.x-padding, FB.y-padding, FC.z+0.1); //(  w ,  h , d );
         glTexCoord2f( 0 , 1 ); glVertex3f( HB.x+padding, FB.y-padding, FC.z+0.1); //( -w ,  h , d );
     glEnd();
+    glDisable(GL_TEXTURE_2D);
 }
 
 void desenhaAtras()
 {
     glNormal3f( 0.0 , 0.0 , -1.0 );
-	glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(TD);
-		myVertex3f(TC);
-		myVertex3f(TB);
-		myVertex3f(TA);
-	glEnd();
+    glBegin( GL_QUADS );
+    glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+        myVertex3f(TD);
+        myVertex3f(TC);
+        myVertex3f(TB);
+        myVertex3f(TA);
+    glEnd();
 }
 
 void desenhaCima()
@@ -986,36 +1016,36 @@ void desenhaBaixo()
 {
     glNormal3f( 0.0 , -1.0 , 0.0 );
     glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(BD);
-		myVertex3f(BC);
-		myVertex3f(BB);
-		myVertex3f(BA);
-	glEnd();
+    glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+        myVertex3f(BD);
+        myVertex3f(BC);
+        myVertex3f(BB);
+        myVertex3f(BA);
+    glEnd();
 }
 
 void desenhaLadoEsquerdo()
 {
     glNormal3f( -1.0 , 0.0 , 0.0 );
-	glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(LED);
-		myVertex3f(LEC);
-		myVertex3f(LEB);
-		myVertex3f(LEA);
-	glEnd();
+    glBegin( GL_QUADS );
+    glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+        myVertex3f(LED);
+        myVertex3f(LEC);
+        myVertex3f(LEB);
+        myVertex3f(LEA);
+    glEnd();
 }
 
 void desenhaLadoDireito()
 {
     glNormal3f( 1.0 , 0.0 , 0.0 );
-	glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(LDD);
-		myVertex3f(LDC);
-		myVertex3f(LDB);
-		myVertex3f(LDA);
-	glEnd();
+    glBegin( GL_QUADS );
+    glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+        myVertex3f(LDD);
+        myVertex3f(LDC);
+        myVertex3f(LDB);
+        myVertex3f(LDA);
+    glEnd();
 }
 
 void desenhaEsferaCanto(point pnt, float offsetZ, int cortes) {
@@ -1162,7 +1192,7 @@ void desenha_arCondicionado(void)
         glPushMatrix();
             SRT(VENTILADOR, -15);
             desenha_helice();
-		glPopMatrix();
+        glPopMatrix();
 
 		glPushMatrix();
             SRT(GRADEF);
@@ -1176,7 +1206,6 @@ void desenha_arCondicionado(void)
 
 	glPopMatrix();
 
-	animacao();
 }
 
 // Funcao responsavel por desenhar os objetos
@@ -1202,6 +1231,8 @@ void desenha(void)
     glPushMatrix();
         desenha_arCondicionado();
     glPopMatrix();
+
+    animacao();
 
     // Executa os comandos OpenGL
     glutSwapBuffers();
@@ -1229,6 +1260,13 @@ void inicializa( void )
         transf[i].angy = 0.0;
         transf[i].angz = 0.0;
     }
+
+    angle=45;
+
+    // Inicializa as variáveis usadas para alterar a posição do
+    // observador virtual
+    rotX = 0;
+    rotY = 0;
 
     camera.posx   = 0;
     camera.posy   = 0;
@@ -1266,7 +1304,7 @@ void inicializa( void )
     // posicao
     luz[ 0 ].posicao[ 0 ] =    0.0;
     luz[ 0 ].posicao[ 1 ] =  300.0;
-    luz[ 0 ].posicao[ 2 ] =  300.0;
+    luz[ 0 ].posicao[ 2 ] =  100.0;
     luz[ 0 ].posicao[ 3 ] =    1.0;
 
     luz[ 0 ].ligada = true;
@@ -1318,6 +1356,9 @@ void inicializa( void )
     glutPositionWindow( ( glutGet( GLUT_SCREEN_WIDTH  ) - LAR_MAIN ) / 2 ,
                         ( glutGet( GLUT_SCREEN_HEIGHT ) - ALT_MAIN ) / 2 );
     Texturizacao();
+
+    PosicionaObservador();
+    glutPostRedisplay();
 }
 
 // ************************************************************
@@ -1449,8 +1490,6 @@ void teclado( unsigned char key , GLint x , GLint y )
 // os parametros que recebe sao a tecla pressionada e a posicao x e y
 void teclas_especiais( GLint key , GLint x , GLint y )
 {
-    int l , c;
-
     GLint modificador = glutGetModifiers();
 
     if ( modificador & GLUT_ACTIVE_ALT)
@@ -1480,14 +1519,6 @@ void teclas_especiais( GLint key , GLint x , GLint y )
 
         if ( key == GLUT_KEY_PAGE_DOWN)
             luz[ 0 ].posicao[ 2 ] -= passo*3;
-
-        define_iluminacao();
-    }
-    if ( modificador & GLUT_ACTIVE_CTRL )
-    {
-        // CTRL pressionado
-
-        l = c = 0;
 
         define_iluminacao();
     }
@@ -1536,6 +1567,63 @@ void teclas_especiais( GLint key , GLint x , GLint y )
 }
 
 
+// Função callback para eventos de botões do mouse
+void GerenciaMouse(int button, int state, int x, int y)
+{
+    if(state==GLUT_DOWN)
+    {
+        // Salva os parâmetros atuais
+        x_ini = x;
+        y_ini = y;
+        obsX_ini = camera.posx;
+        obsY_ini = camera.posy;
+        obsZ_ini = camera.posz;
+        rotX_ini = rotX;
+        rotY_ini = rotY;
+        bot = button;
+    }
+    else bot = -1;
+}
+
+// Função callback para eventos de movimento do mouse
+#define SENS_ROT    5.0
+#define SENS_OBS    10.0
+#define SENS_TRANSL 10.0
+void GerenciaMovim(int x, int y)
+{
+    // Botão esquerdo ?
+    if(bot==GLUT_LEFT_BUTTON)
+    {
+        // Calcula diferenças
+        int deltax = x_ini - x;
+        int deltay = y_ini - y;
+        // E modifica ângulos
+        rotY = rotY_ini - deltax/SENS_ROT;
+        rotX = rotX_ini - deltay/SENS_ROT;
+    }
+    // Botão direito ?
+    else if(bot==GLUT_RIGHT_BUTTON)
+    {
+        // Calcula diferença
+        int deltaz = y_ini - y;
+        // E modifica distância do observador
+        camera.posz = obsZ_ini + deltaz/SENS_OBS;
+    }
+    // Botão do meio ?
+    else if(bot==GLUT_MIDDLE_BUTTON)
+    {
+        // Calcula diferenças
+        int deltax = x_ini - x;
+        int deltay = y_ini - y;
+        // E modifica posições
+        camera.posx = obsX_ini + deltax/SENS_TRANSL;
+        camera.posy = obsY_ini - deltay/SENS_TRANSL;
+    }
+    PosicionaObservador();
+    glutPostRedisplay();
+}
+
+
 // ************************************************************
 // MAIN
 // ************************************************************
@@ -1560,7 +1648,7 @@ int main( int argc , char *argv[] )
     glutInitWindowSize( LAR_MAIN , ALT_MAIN );
     glutInitWindowPosition( ( glutGet( GLUT_SCREEN_WIDTH  ) - LAR_MAIN ) / 2 ,
                            ( glutGet( GLUT_SCREEN_HEIGHT ) - ALT_MAIN  ) / 2 );
-    jan[ 2 ] = glutCreateWindow( "ILUMINACAO" );
+    jan[ 2 ] = glutCreateWindow( "Ar condicionado" );
 
     // callbacks da janela de help
     glutSetWindow( jan[ 0 ] );
@@ -1578,6 +1666,12 @@ int main( int argc , char *argv[] )
     glutKeyboardFunc( teclado );
     glutSpecialFunc( teclas_especiais );
     glutReshapeFunc( altera_tamanho_janela );
+
+    // Registra a função callback para eventos de botões do mouse
+    glutMouseFunc(GerenciaMouse);
+
+    // Registra a função callback para eventos de movimento do mouse
+    glutMotionFunc(GerenciaMovim);
 
     // funcao que tem as inicializacoes de variaveis e estados do OpenGL
     inicializa();
