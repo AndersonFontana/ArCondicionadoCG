@@ -22,14 +22,14 @@
 #include <sstream>
 
 #if __APPLE__
-	#include <OpenGL/gl.h>
-	#include <OpenGL/glu.h>
-	#include <GLUT/glut.h>
-	#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    #include <OpenGL/gl.h>
+    #include <OpenGL/glu.h>
+    #include <GLUT/glut.h>
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #elif linux
-	#include <GL/glut.h>
+    #include <GL/glut.h>
 #else
-	#include <gl/glut.h>
+    #include <gl/glut.h>
 #endif
 
 using namespace std;
@@ -52,9 +52,10 @@ using namespace std;
 #define LAR_HELP  600
 #define ALT_HELP  240
 
-#define NUM_TEX   1
+#define NUM_TEX   3
 #define TEXTURA1  1000
 #define TEXTURA2  1001
+#define TEXTURA3  1002
 #define NUM_OBJETOS 5
 
 #define CENA 0
@@ -132,7 +133,7 @@ GLint jan[ JANELAS ], passo, objeto;
 
 struct point
 {
-	float x, y, z;
+    float x, y, z;
 };
 
 int arLargura = 86;
@@ -140,19 +141,19 @@ int arAltura = 60;
 int arProfundidade = 30;
 int diametroHelice = 40;
 
-int RH = diametroHelice/2;		// Raio da hélice
-point FA = {-(arLargura/2), arAltura/2, arProfundidade/2};	// Canto Superior Esquerdo
-point FB = {FA.x+arLargura, FA.y, FA.z};					// Canto Superior Direito
-point FC = {FA.x+arLargura, FA.y-arAltura, FA.z};			// Canto Inferior Direito
-point FD = {FA.x, FA.y-arAltura, FA.z};						// Canto Inferior Esquerdo
+int RH = diametroHelice/2;      // Raio da hélice
+point FA = {-(arLargura/2), arAltura/2, arProfundidade/2};  // Canto Superior Esquerdo
+point FB = {FA.x+arLargura, FA.y, FA.z};                    // Canto Superior Direito
+point FC = {FA.x+arLargura, FA.y-arAltura, FA.z};           // Canto Inferior Direito
+point FD = {FA.x, FA.y-arAltura, FA.z};                     // Canto Inferior Esquerdo
 
-point CH = {FA.x+(arLargura/3), FA.y-(arAltura/2), FA.z};	// Centro da Hélice
-point HA = {CH.x-RH, CH.y+RH, CH.z};						// Canto Superior Esquerdo da Hélice
-point HB = {CH.x+RH, CH.y+RH, CH.z};						// Canto Superior Direito da Hélice
-point HC = {CH.x+RH, CH.y-RH, CH.z};						// Canto Inferior Direito da Hélice
-point HD = {CH.x-RH, CH.y-RH, CH.z};						// Canto Inferior Esquerdo da Hélice
+point CH = {FA.x+(arLargura/3), FA.y-(arAltura/2), FA.z};   // Centro da Hélice
+point HA = {CH.x-RH, CH.y+RH, CH.z};                        // Canto Superior Esquerdo da Hélice
+point HB = {CH.x+RH, CH.y+RH, CH.z};                        // Canto Superior Direito da Hélice
+point HC = {CH.x+RH, CH.y-RH, CH.z};                        // Canto Inferior Direito da Hélice
+point HD = {CH.x-RH, CH.y-RH, CH.z};                        // Canto Inferior Esquerdo da Hélice
 
-float RC = 2;		// Raio dos Cantos
+float RC = 2;       // Raio dos Cantos
 // Pontos de Cima
 point CA = {FA.x, FA.y+RC, FA.z-arProfundidade};
 point CB = {FB.x, FB.y+RC, FB.z-arProfundidade};
@@ -336,9 +337,13 @@ void Texturizacao() // faz o carregamento
     glBindTexture ( GL_TEXTURE_2D, texture_id[0] );//armazena na posição 0 do vetor
     LoadBMP ( "Texturas/logo.bmp" ); // lê a textura
 
-     texture_id[ 1 ] = TEXTURA2;
-     glBindTexture ( GL_TEXTURE_2D, texture_id[1] );
-     LoadBMP ( "Texturas/textura1.bmp" );
+    texture_id[ 1 ] = TEXTURA2;
+    glBindTexture ( GL_TEXTURE_2D, texture_id[1] );
+    LoadBMP ( "Texturas/textura1.bmp" );
+
+    texture_id[ 2 ] = TEXTURA3;
+    glBindTexture ( GL_TEXTURE_2D, texture_id[2] );
+    LoadBMP ( "Texturas/inside.bmp" );
 
     glTexGeni( GL_S , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
     glTexGeni( GL_T , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
@@ -562,17 +567,17 @@ void altera_tamanho_janela( GLsizei largura , GLsizei altura )
 // ************************************************************
 //Suporte
 void desenha_suporte(int trans_v, int trans_b ){
-GLUquadricObj *sup; // um objeto é criado
-sup = gluNewQuadric();
+    GLUquadricObj *sup; // um objeto é criado
+    sup = gluNewQuadric();
 
 
-glPushMatrix();
-glTranslatef(trans_v , -10 , -25);
+    glPushMatrix();
+    glTranslatef(trans_v , -10 , -25);
         glScalef( 0.1 , 0.1 , 0.1 );
 
         //FRENTE
             glBegin( GL_POLYGON );
-            glNormal3f(   0.0 ,   0.0 ,  1.0 );	// Normal da face
+            glNormal3f(   0.0 ,   0.0 ,  1.0 ); // Normal da face
                  glTexCoord2f( 1.0 ,  1.0 ); glVertex3fv( v[0] );
                  glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( v[1] );
                  glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( v[2] );
@@ -599,7 +604,7 @@ glTranslatef(trans_v , -10 , -25);
 
          //FRENTE_E
          glBegin( GL_POLYGON );
-                glNormal3f(   0.0 ,   0.0 ,  1.0 );	// Normal da face
+                glNormal3f(   0.0 ,   0.0 ,  1.0 ); // Normal da face
                 glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( v[4] );
                 glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( v[8] );
                 glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( v[9] );
@@ -635,7 +640,7 @@ glTranslatef(trans_v , -10 , -25);
 
         //FRENTE_D
          glBegin( GL_POLYGON );
-                glNormal3f(   0.0 ,   0.0 ,  1.0  );	// Normal da face
+                glNormal3f(   0.0 ,   0.0 ,  1.0  );    // Normal da face
                 glTexCoord2f( 1.0 ,  1.0 );glVertex3fv( v[14] );
                 glTexCoord2f( 0.0 ,  1.0 );glVertex3fv( v[16] );
                 glTexCoord2f( 0.0 ,  0.0 );glVertex3fv( v[17] );
@@ -721,7 +726,7 @@ void desenha_helice(void)
     glColor4f( 1.0 , 1.0 , 0.0 , 1.0 );
 
     glScalef(0.14, 0.14, 0.14);
-    glTranslatef(-100, 0, 0);
+    glTranslatef(-110, 0, 0);
 
     glPushMatrix(); // CENA
 
@@ -734,7 +739,7 @@ void desenha_helice(void)
             glBegin(GL_POLYGON);
                 int radius = 20;
                 for(double i = 0; i < 2 * PI; i += PI / 50)
- 					glVertex3f(cos(i) * radius, sin(i) * radius, 0.0);
+                    glVertex3f(cos(i) * radius, sin(i) * radius, 0.0);
             glEnd();
 
             glPushMatrix(); // HÉLICES
@@ -843,96 +848,99 @@ void gradeFrente(){
 }
 
 
-void drawSimpleCircle(point pnt, int raio, float prof, int segmentos)
+void drawInside(point pnt, int raio, float prof, int segmentos)
 {
-	point at;
-	float ang;
-	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
-		ang =  2 * PI * i / segmentos;
-		at.x = raio * cos( ang );
-		at.y = raio * sin( ang );
-		glVertex3f( pnt.x + at.x , pnt.y + at.y , pnt.z - prof);
-	}
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture ( GL_TEXTURE_2D, TEXTURA3 );
+    glBegin( GL_QUADS );
+        glNormal3f(   0.0 ,   0.0 ,  1.0 ); // Normal da face
+        glTexCoord2f( 0 , 1 ); glVertex3f( HA.x, HA.y, HA.z-prof); //( -w ,  h , d );
+        glTexCoord2f( 1 , 1 ); glVertex3f( HB.x, HB.y, HB.z-prof); //(  w ,  h , d );
+        glTexCoord2f( 1 , 0 ); glVertex3f( HC.x, HC.y, HC.z-prof); //(  w , -h , d );
+        glTexCoord2f( 0 , 0 ); glVertex3f( HD.x, HD.y, HD.z-prof); //( -w , -h , d );
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
 }
 
 void drawMainCircle( float prof, int segmentos)
 {
-	float ang;
-	point at, ant, hp;	// Atual, Anterior, helice point
+    float ang;
+    point at, ant, hp;  // Atual, Anterior, helice point
 
     glNormal3f( 0.0 , 0.0 , 1.0 );
-	glBegin( GL_TRIANGLE_STRIP );
-	glColor4f(0.7, 0.7, 0.7, 1.0);
-	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
-		ang =  2 * PI * i / segmentos;
-		at.x = RH * cos( ang );
-		at.y = RH * sin( ang );
-		glVertex3f( CH.x + at.x , CH.y + at.y , CH.z - prof);
-		glVertex3f( CH.x + at.x , CH.y + at.y , CH.z);
-	}
-	glEnd();
+    glBegin( GL_TRIANGLE_STRIP );
+    glColor4f(0.7, 0.7, 0.7, 1.0);
+    for ( GLint i = 0 ; i <= segmentos ; i ++ ){
+        ang =  2 * PI * i / segmentos;
+        at.x = RH * cos( ang );
+        at.y = RH * sin( ang );
+        glVertex3f( CH.x + at.x , CH.y + at.y , CH.z - prof);
+        glVertex3f( CH.x + at.x , CH.y + at.y , CH.z);
+    }
+    glEnd();
 
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-	for ( GLint i = 0 ; i <= segmentos ; i ++ ){
-		ang =  2 * PI * i / segmentos;
-		at.x = RH * cos( ang );
-		at.y = RH * sin( ang );
+    glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+    for ( GLint i = 0 ; i <= segmentos ; i ++ ){
+        ang =  2 * PI * i / segmentos;
+        at.x = RH * cos( ang );
+        at.y = RH * sin( ang );
 
-		if (i==0) {ant = at; continue;}
+        if (i==0) {ant = at; continue;}
 
-		if (CH.y + at.y >= CH.y)		// Superior
-			if (CH.x + at.x <= CH.x)			// Esquerdo
-				hp = HA;
-			else 								// Direito
-				hp = HB;
-		else 							// Inferior
-			if (CH.x + at.x <= CH.x)			// Esquerdo
-				hp = HD;
-			else 								// Direito
-				hp = HC;
-		glNormal3f( 0.0 , 0.0 , 1.0 );
-		glBegin( GL_TRIANGLES );
-			glVertex3f( CH.x + ant.x , CH.y + ant.y , CH.z);
-			glVertex3f( hp.x , hp.y , hp.z);
-			glVertex3f( CH.x + at.x , CH.y + at.y , CH.z);
-		glEnd();
+        if (CH.y + at.y >= CH.y)        // Superior
+            if (CH.x + at.x <= CH.x)            // Esquerdo
+                hp = HA;
+            else                                // Direito
+                hp = HB;
+        else                            // Inferior
+            if (CH.x + at.x <= CH.x)            // Esquerdo
+                hp = HD;
+            else                                // Direito
+                hp = HC;
+        glNormal3f( 0.0 , 0.0 , 1.0 );
+        glBegin( GL_TRIANGLES );
+            glVertex3f( CH.x + ant.x , CH.y + ant.y , CH.z);
+            glVertex3f( hp.x , hp.y , hp.z);
+            glVertex3f( CH.x + at.x , CH.y + at.y , CH.z);
+        glEnd();
 
-		ant = at;
-	}
-    glNormal3f( 0.0 , 0.0 , 0.0 );
-	glBegin( GL_TRIANGLE_FAN );
-		glColor4f(0.5, 0.5, 0.5, 0.5);
-		drawSimpleCircle(CH, RH, prof, segmentos);
-	glEnd();
+        ant = at;
+    }
+
+    glPushMatrix();
+        glColor4f(0.8, 0.8, 0.8, 1.0);
+        drawInside(CH, RH, prof, segmentos);
+    glPopMatrix();
 }
 
 void myVertex3f(point pnt)
 {
-	glVertex3f(pnt.x,   pnt.y,  pnt.z);
+    glVertex3f(pnt.x,   pnt.y,  pnt.z);
 }
 
 void desenhaFrente()
 {
-	drawMainCircle( 20, 200 );
+    drawMainCircle( 20, 200 );
 
     glNormal3f( 0.0 , 0.0 , 1.0 );
-	glBegin( GL_TRIANGLE_STRIP );
+    glBegin( GL_TRIANGLE_STRIP );
         glColor3f(1.0f, 1.0f, 1.0f);
-		myVertex3f(HB);
-		myVertex3f(FA);
-		myVertex3f(HA);
-		myVertex3f(FD);
-		myVertex3f(HD);
-		myVertex3f(FC);
-		myVertex3f(HC);
-		myVertex3f(FB);
-		myVertex3f(HB);
-		myVertex3f(FA);
-	glEnd();
-
+        myVertex3f(HB);
+        myVertex3f(FA);
+        myVertex3f(HA);
+        myVertex3f(FD);
+        myVertex3f(HD);
+        myVertex3f(FC);
+        myVertex3f(HC);
+        myVertex3f(FB);
+        myVertex3f(HB);
+        myVertex3f(FA);
+    glEnd();
+    
+    glEnable(GL_TEXTURE_2D);
     glBindTexture ( GL_TEXTURE_2D, TEXTURA1 );
-        glColor3f(0.8f, 0.8f, 0.8f);
-        glBegin( GL_QUADS );
+    glColor3f(1.0, 1.0, 1.0);
+    glBegin( GL_QUADS );
 
         // Face frontal
         int padding = 5;
@@ -942,18 +950,19 @@ void desenhaFrente()
         glTexCoord2f( 1 , 1 ); glVertex3f( FB.x-padding, FB.y-padding, FC.z+0.1); //(  w ,  h , d );
         glTexCoord2f( 0 , 1 ); glVertex3f( HB.x+padding, FB.y-padding, FC.z+0.1); //( -w ,  h , d );
     glEnd();
+    glDisable(GL_TEXTURE_2D);
 }
 
 void desenhaAtras()
 {
     glNormal3f( 0.0 , 0.0 , -1.0 );
-	glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(TD);
-		myVertex3f(TC);
-		myVertex3f(TB);
-		myVertex3f(TA);
-	glEnd();
+    glBegin( GL_QUADS );
+    glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+        myVertex3f(TD);
+        myVertex3f(TC);
+        myVertex3f(TB);
+        myVertex3f(TA);
+    glEnd();
 }
 
 void desenhaCima()
@@ -972,150 +981,108 @@ void desenhaBaixo()
 {
     glNormal3f( 0.0 , -1.0 , 0.0 );
     glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(BD);
-		myVertex3f(BC);
-		myVertex3f(BB);
-		myVertex3f(BA);
-	glEnd();
+    glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+        myVertex3f(BD);
+        myVertex3f(BC);
+        myVertex3f(BB);
+        myVertex3f(BA);
+    glEnd();
 }
 
 void desenhaLadoEsquerdo()
 {
     glNormal3f( -1.0 , 0.0 , 0.0 );
-	glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(LED);
-		myVertex3f(LEC);
-		myVertex3f(LEB);
-		myVertex3f(LEA);
-	glEnd();
+    glBegin( GL_QUADS );
+    glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+        myVertex3f(LED);
+        myVertex3f(LEC);
+        myVertex3f(LEB);
+        myVertex3f(LEA);
+    glEnd();
 }
 
 void desenhaLadoDireito()
 {
     glNormal3f( 1.0 , 0.0 , 0.0 );
-	glBegin( GL_QUADS );
-	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		myVertex3f(LDD);
-		myVertex3f(LDC);
-		myVertex3f(LDB);
-		myVertex3f(LDA);
-	glEnd();
+    glBegin( GL_QUADS );
+    glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
+        myVertex3f(LDD);
+        myVertex3f(LDC);
+        myVertex3f(LDB);
+        myVertex3f(LDA);
+    glEnd();
 }
 
 void desenhaEsferaCanto(point pnt, float offsetZ, int cortes) {
-	// GLUquadricObj *qobj;
-	// qobj = gluNewQuadric();
-
-	// glPolygonMode(GL_FRONT_AND_BACK, GL_FILL );
-	// gluQuadricDrawStyle( qobj,  GLU_FILL );
-
-	glPushMatrix();
-		glTranslatef( pnt.x , pnt.y , pnt.z+offsetZ );
-		// gluSphere( qobj, RC, cortes, cortes );
-		glutSolidSphere(RC, cortes, cortes );
-	glPopMatrix();
-
-	// gluDeleteQuadric( qobj );
+    glPushMatrix();
+        glTranslatef( pnt.x , pnt.y , pnt.z+offsetZ );
+        glutSolidSphere(RC, cortes, cortes );
+    glPopMatrix();
 }
 
 void desenhaCilindroLado(float x, float y, float z, float h, char rot, int cortes) {
-	GLUquadricObj *qobj;
-	qobj = gluNewQuadric();
+    GLUquadricObj *qobj;
+    qobj = gluNewQuadric();
 
-	// glPolygonMode(GL_FRONT_AND_BACK, GL_FILL );
-	// gluQuadricDrawStyle( qobj,  GLU_FILL );
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL );
+    // gluQuadricDrawStyle( qobj,  GLU_FILL );
 
-	glPushMatrix();
-		glTranslatef( x , y , z );
-		if (rot == '|')
-			glRotatef( 90, 1 , 0 , 0 );
-		else if (rot == '-')
-			glRotatef( 90 , 0 , 1 , 0 );
-		else if (rot == '.')
-			glRotatef( 180 , 1 , 0 , 0 );
-		gluCylinder( qobj , RC , RC , h , cortes , cortes );
-	glPopMatrix();
+    glPushMatrix();
+        glTranslatef( x , y , z );
+        if (rot == '|')
+            glRotatef( 90, 1 , 0 , 0 );
+        else if (rot == '-')
+            glRotatef( 90 , 0 , 1 , 0 );
+        else if (rot == '.')
+            glRotatef( 180 , 1 , 0 , 0 );
+        gluCylinder( qobj , RC , RC , h , cortes , cortes );
+    glPopMatrix();
 
-	gluDeleteQuadric( qobj );
+    gluDeleteQuadric( qobj );
 }
 
 void desenha_arCondicionado(void)
 {
-	glPushMatrix();
-
-		// glBegin( GL_POINTS );
-		// 	glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-		// 	myVertex3f(FA);
-		// 	myVertex3f(FB);
-		// 	myVertex3f(FC);
-		// 	myVertex3f(FD);
-		// 	myVertex3f(CH);
-		// 	myVertex3f(HA);
-		// 	myVertex3f(HB);
-		// 	myVertex3f(HC);
-		// 	myVertex3f(HD);
-		// 	myVertex3f(CA);
-		// 	myVertex3f(CB);
-		// 	myVertex3f(CD);
-		// 	myVertex3f(CC);
-		// 	myVertex3f(LDA);
-		// 	myVertex3f(LDB);
-		// 	myVertex3f(LDC);
-		// 	myVertex3f(LDD);
-		// 	myVertex3f(BA);
-		// 	myVertex3f(BB);
-		// 	myVertex3f(BC);
-		// 	myVertex3f(BD);
-		// 	myVertex3f(LEA);
-		// 	myVertex3f(LEB);
-		// 	myVertex3f(LEC);
-		// 	myVertex3f(LED);
-		// 	myVertex3f(TA);
-		// 	myVertex3f(TB);
-		// 	myVertex3f(TC);
-		// 	myVertex3f(TD);
-		// glEnd();
+    glPushMatrix();
 
         glBindTexture ( GL_TEXTURE_2D, TEXTURA1 ); // textura corrente
-		desenhaFrente();
-		desenhaAtras();
-		desenhaCima();
-		desenhaBaixo();
-		desenhaLadoEsquerdo();
-		desenhaLadoDireito();
+        desenhaFrente();
+        desenhaAtras();
+        desenhaCima();
+        desenhaBaixo();
+        desenhaLadoEsquerdo();
+        desenhaLadoDireito();
 
-		desenhaEsferaCanto(FA, -RC, 20);
-		desenhaEsferaCanto(FB, -RC, 20);
-		desenhaEsferaCanto(FC, -RC, 20);
-		desenhaEsferaCanto(FD, -RC, 20);
+        desenhaEsferaCanto(FA, -RC, 20);
+        desenhaEsferaCanto(FB, -RC, 20);
+        desenhaEsferaCanto(FC, -RC, 20);
+        desenhaEsferaCanto(FD, -RC, 20);
 
-		desenhaEsferaCanto(TA, RC, 20);
-		desenhaEsferaCanto(TB, RC, 20);
-		desenhaEsferaCanto(TC, RC, 20);
-		desenhaEsferaCanto(TD, RC, 20);
+        desenhaEsferaCanto(TA, RC, 20);
+        desenhaEsferaCanto(TB, RC, 20);
+        desenhaEsferaCanto(TC, RC, 20);
+        desenhaEsferaCanto(TD, RC, 20);
 
-		desenhaCilindroLado(FA.x, FA.y, FA.z-RC, arAltura, '|', 20);
-		desenhaCilindroLado(FB.x, FB.y, FB.z-RC, arAltura, '|', 20);
-		desenhaCilindroLado(FA.x, FA.y, FA.z-RC, arLargura, '-', 20);
-		desenhaCilindroLado(FD.x, FD.y, FD.z-RC, arLargura, '-', 20);
+        desenhaCilindroLado(FA.x, FA.y, FA.z-RC, arAltura, '|', 20);
+        desenhaCilindroLado(FB.x, FB.y, FB.z-RC, arAltura, '|', 20);
+        desenhaCilindroLado(FA.x, FA.y, FA.z-RC, arLargura, '-', 20);
+        desenhaCilindroLado(FD.x, FD.y, FD.z-RC, arLargura, '-', 20);
 
-		desenhaCilindroLado(TA.x, TA.y, TA.z+RC, arAltura, '|', 20);
-		desenhaCilindroLado(TB.x, TB.y, TB.z+RC, arAltura, '|', 20);
-		desenhaCilindroLado(TB.x, TB.y, TB.z+RC, arLargura, '-', 20);
-		desenhaCilindroLado(TC.x, TC.y, TC.z+RC, arLargura, '-', 20);
+        desenhaCilindroLado(TA.x, TA.y, TA.z+RC, arAltura, '|', 20);
+        desenhaCilindroLado(TB.x, TB.y, TB.z+RC, arAltura, '|', 20);
+        desenhaCilindroLado(TB.x, TB.y, TB.z+RC, arLargura, '-', 20);
+        desenhaCilindroLado(TC.x, TC.y, TC.z+RC, arLargura, '-', 20);
 
-		desenhaCilindroLado(FA.x, FA.y, FA.z-RC, arProfundidade-RC, '.', 20);
-		desenhaCilindroLado(FB.x, FB.y, FB.z-RC, arProfundidade-RC, '.', 20);
-		desenhaCilindroLado(FC.x, FC.y, FC.z-RC, arProfundidade-RC, '.', 20);
-		desenhaCilindroLado(FD.x, FD.y, FD.z-RC, arProfundidade-RC, '.', 20);
+        desenhaCilindroLado(FA.x, FA.y, FA.z-RC, arProfundidade-RC, '.', 20);
+        desenhaCilindroLado(FB.x, FB.y, FB.z-RC, arProfundidade-RC, '.', 20);
+        desenhaCilindroLado(FC.x, FC.y, FC.z-RC, arProfundidade-RC, '.', 20);
+        desenhaCilindroLado(FD.x, FD.y, FD.z-RC, arProfundidade-RC, '.', 20);
 
         glPushMatrix();
             desenha_helice();
-		glPopMatrix();
+        glPopMatrix();
 
-		glPushMatrix();
+        glPushMatrix();
             gradeFrente();
         glPopMatrix();
 
@@ -1124,16 +1091,20 @@ void desenha_arCondicionado(void)
         glPopMatrix();
 
         glPushMatrix();
+            glEnable(GL_TEXTURE_2D);
             glBindTexture ( GL_TEXTURE_2D, TEXTURA2 ); // textura corrente
             desenha_suporte(-30, -75);
+            glDisable(GL_TEXTURE_2D);
         glPopMatrix();
 
         glPushMatrix();
+            glEnable(GL_TEXTURE_2D);
             glBindTexture ( GL_TEXTURE_2D, TEXTURA2 ); // textura corrente
             desenha_suporte(30, 75);
+            glDisable(GL_TEXTURE_2D);
         glPopMatrix();
 
-	glPopMatrix();
+    glPopMatrix();
 }
 
 // Funcao responsavel por desenhar os objetos
@@ -1152,10 +1123,7 @@ void desenha(void)
     glScalef( transf.sx , transf.sy , transf.sz );*/
     SRT(CENA);
 
-    // glPushMatrix();
     desenha_arCondicionado();
-    //     desenha_helice();
-    // glPopMatrix();
 
     // Executa os comandos OpenGL
     glutSwapBuffers();
@@ -1508,7 +1476,7 @@ int main( int argc , char *argv[] )
     glutInitWindowSize( LAR_MAIN , ALT_MAIN );
     glutInitWindowPosition( ( glutGet( GLUT_SCREEN_WIDTH  ) - LAR_MAIN ) / 2 ,
                            ( glutGet( GLUT_SCREEN_HEIGHT ) - ALT_MAIN  ) / 2 );
-    jan[ 2 ] = glutCreateWindow( "ILUMINACAO" );
+    jan[ 2 ] = glutCreateWindow( "Ar condicionado" );
 
     // callbacks da janela de help
     glutSetWindow( jan[ 0 ] );
