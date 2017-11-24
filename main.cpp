@@ -55,11 +55,12 @@ using namespace std;
 #define ALT_HELP  240
 
 
-#define NUM_TEX   4
+#define NUM_TEX   5
 #define TEXTURA1  1000
 #define TEXTURA2  1001
 #define TEXTURA3  1002
 #define TEXTURA4  1003
+#define TEXTURA5  1004
 
 #define NUM_OBJETOS 5
 
@@ -362,6 +363,10 @@ void Texturizacao() // faz o carregamento
     texture_id[ 3 ] = TEXTURA4;
     glBindTexture ( GL_TEXTURE_2D, texture_id[3] );
     LoadBMP ( "Texturas/parede.bmp" );
+
+    texture_id[ 4 ] = TEXTURA5;
+    glBindTexture ( GL_TEXTURE_2D, texture_id[4] );
+    LoadBMP ( "Texturas/filtro.bmp" );
 
     glTexGeni( GL_S , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
     glTexGeni( GL_T , GL_TEXTURE_GEN_MODE , GL_SPHERE_MAP );
@@ -1035,14 +1040,19 @@ void desenhaBaixo()
 
 void desenhaLadoEsquerdo()
 {
-    glNormal3f( -1.0 , 0.0 , 0.0 );
-    glBegin( GL_QUADS );
-    glColor4f( 1.0 , 1.0 , 1.0 , 1.0 );
-        myVertex3f(LED);
-        myVertex3f(LEC);
-        myVertex3f(LEB);
-        myVertex3f(LEA);
-    glEnd();
+    glPushMatrix();
+    glEnable(GL_TEXTURE_2D);
+        glNormal3f( -1.0 , 0.0 , 0.0 );
+        glBindTexture ( GL_TEXTURE_2D, TEXTURA5 );
+        glBegin( GL_QUADS );
+        glColor3f( 1.0 , 1.0 , 1.0 );
+            glTexCoord2f( 0 , 0 ); myVertex3f(LED);
+            glTexCoord2f( 1 , 0 ); myVertex3f(LEC);
+            glTexCoord2f( 1 , 1 ); myVertex3f(LEB);
+            glTexCoord2f( 0 , 1 ); myVertex3f(LEA);
+        glEnd();
+    glDisable(GL_TEXTURE_2D);
+    glPopMatrix();
 }
 
 void desenhaLadoDireito()
@@ -1132,7 +1142,6 @@ void animacao(){
     }
 }
 void desenhaCaixa(){
-        glBindTexture ( GL_TEXTURE_2D, TEXTURA1 ); // textura corrente
 		desenhaFrente();
 		desenhaAtras();
 		desenhaCima();
